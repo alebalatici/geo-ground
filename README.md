@@ -47,6 +47,19 @@ GeoGround is a Commercial Real Estate & Retail Site Intelligence platform. We pr
 
 ---
 
-## 6. Current Project Status & Task
+## 6. Current Project Status & Roadmap
 
-**Current Status:** The repository structure (Monorepo) is set up with separate `backend` (FastAPI) and `frontend` (React) directories.
+### Completed (Backend - Earth Observation Pipeline)
+- **FastAPI Core & Configuration:** Environment-driven settings (`pydantic-settings`), CORS setup, lifespan lifecycle management, and `/health` diagnostic endpoint.
+- **Google Earth Engine Integration (`app/integrations/gee/`):**
+  - `client.py`: Service Account and local CLI authentication handler.
+  - `sentinel2.py`: Optical vegetation tracking (NDVI) with `SCL` scene-level cloud/shadow masking at 10m resolution.
+  - `sentinel1.py`: All-weather C-band SAR radar backscatter (`VV` & `VH` in dB) for detecting structural changes, machinery, and site clearing.
+  - `landsat.py`: Harmonized 2000–present annual summer composite pipeline combining Landsat 7, 8, and 9 (`NDVI` + Land Surface Temperature `LST_C` in °C).
+- **Automated Testing:** Unit and live integration test suites (`unittest`) covering API health and all three satellite sensors over Romanian test polygons.
+
+### Next Up (Backend)
+1. **Spatial Database (PostgreSQL + PostGIS):** Models (`MonitoredSite`, `SatelliteSnapshot`, `SiteAlert`) and spatial persistence for Romanian hubs (Cluj-Napoca, Bucharest, Timișoara).
+2. **Analysis & Alert Engine (`app/services/`):** Correlating NDVI drops with SAR spikes to trigger Green/Amber early-warning signals.
+3. **LLM Executive Layer (`app/integrations/llm/`):** Gemini/Groq integration for translating telemetry anomalies into executive summaries and powering the contextual site assistant.
+4. **REST API v1 & Seeding:** Endpoints for sites, 2000–present timeline, spectral correlation charts, CSV exports, and pre-computed demo data for instant UI rendering.
