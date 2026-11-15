@@ -73,7 +73,106 @@ GeoGround is a Commercial Real Estate & Retail Site Intelligence platform. We pr
 - **Business Logic & Alert Engine (`app/services/alert_engine.py`):**
   - Multi-sensor correlation engine comparing historical baseline vs. recent observation windows across optical NDVI drops and SAR (`VV`/`VH`) double-bounce backscatter spikes.
   - Deterministic signal classification (`BASELINE_STABLE`, `LAND_CLEARING`, `STRUCTURAL_EXPANSION`, `CONVERSION_ACTIVE`), `GREEN` / `AMBER` severity assignment, and cloud-quality-weighted confidence scoring.
-- **Test Suite (`tests/`):** Comprehensive unit (mocked) and live integration tests (`unittest`) covering API health, GEE connectivity, GeoJSON polygon validation, all three satellite pipelines, Post
+- **Test Suite (`tests/`):** Comprehensive unit (mocked) and live integration tests (`unittest`) covering API health, GEE connectivity, GeoJSON polygon validation, all three satellite pipelines, PostGIS persistence (`test_spatial_models.py`), repository query/transaction flows (`test_site_repository.py`), and anomaly alert thresholds (`test_alert_engine.py`).
 ### 🚧 Next Up (Backend)
 1. **LLM Executive Layer (`app/integrations/llm/`):** Integrate Gemini/Groq API to generate executive summaries and power the contextual site chat assistant.
 2. **REST API v1 & Seeding (`app/api/v1/`, `scripts/`):** Expose endpoints for sites, 2000–present timeline, spectral correlations, CSV exports, and pre-populate 6–8 real Romanian real-estate/industrial hubs for instant demo performance.
+
+## 🚀 Getting Started (Local Development Setup)
+
+Follow the steps below to set up and run the **GeoGround** backend locally.
+
+### Prerequisites
+* **Python 3.11+**
+* **Docker & Docker Compose** (for the PostgreSQL 16 + PostGIS 3.4 spatial database)
+* **Google Earth Engine (GEE)** approved account or the team's Service Account JSON key
+
+---
+
+### 1. Clone the Repository & Set Up `.venv`
+
+```bash
+git clone https://github.com/alebalatici/geo-ground
+cd geoground
+
+# Create the Python virtual environment
+python -m venv .venv
+
+# Activate it (Linux / macOS):
+source .venv/bin/activate
+
+# Activate it (Windows PowerShell):
+.venv\Scripts\Activate.ps1
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+---
+
+### 2. Configure Environment Variables (`.env`)
+
+Do **not** delete `.env.example` — it serves as the shared configuration template for all contributors. Create your own local `.env` file (which is automatically ignored by Git):
+
+```bash
+# Linux / macOS:
+cp .env.example .env
+
+# Windows (CMD / PowerShell):
+copy .env.example .env
+```
+
+Open your local `.env` file and fill in the required values:
+
+1. **Spatial Database (PostGIS):**
+   The default credentials in `.env.example` are pre-configured for the local Docker container. Leave them as-is unless you already have another PostgreSQL instance running on port `5432`.
+
+   
+2.  (Personal GEE Account via CLI):** If using your own approved Earth Engine account, leave the Service Account fields blank in `.env` and authenticate via CLI (with `.venv` activated):
+     ```bash
+     earthengine authenticate
+     ```
+
+3. **LLM API Key (Executive Summaries & Site Assistant):**
+   Generate a free-tier API key from [Google AI Studio](https://aistudio.google.com/) (Gemini) or [Groq Console](https://console.groq.com/) and add it to your `.env` file.
+
+---
+
+### 3. Start the Spatial Database (PostgreSQL + PostGIS)
+
+Make sure Docker Desktop is running, then start the database container:
+
+```bash
+docker-compose up -d
+```
+
+*(The `postgis` extension is initialized automatically on the first FastAPI startup).*
+
+---
+
+### 4. Start the Backend Server & Verify Health
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Confirm that both PostgreSQL/PostGIS and Google Earth Engine are properly connected:
+* **Live Health Diagnostic (DB + GEE):** `http://127.0.0.1:8000/health`
+* **Interactive API Docs (Swagger UI):** `http://127.0.0.1:8000/docs`
+
+---
+
+### 5. Run Automated Tests
+
+Before opening a Pull Request, verify that all unit and integration tests pass:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+---
+
+### 🌿 Team Git Workflow
+* **Never push directly to `main`.**
+* Create a dedicated feature branch for each task (e.g., `feature/llm-executive-layer`, `feature/api-v1-endpoints`, `feature/frontend-ui`).
+* Open a **Pull Request (PR)** targeting `main` once all local tests pass.
