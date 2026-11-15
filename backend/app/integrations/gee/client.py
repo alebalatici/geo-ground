@@ -24,6 +24,7 @@ def init_gee() -> None:
 def check_gee_connection() -> dict:
     """Executes a simple calculation on Google Earth Engine servers to confirm the API is working."""
     try:
+        result = ee.Number(1).add(1).getInfo()
         return {"connected": True, "test_computation": result}
     except Exception as exc:
         return {"connected": False, "error": str(exc)}

@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "GeoGround API"
@@ -13,8 +14,15 @@ class Settings(BaseSettings):
     # CORS React
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
+    # Database (PostgreSQL + PostGIS)
+    DATABASE_URL: str = Field(
+        default="postgresql+psycopg2://geoground:geoground@localhost:5432/geoground",
+        description="PostgreSQL + PostGIS connection string",
+    )
+    DB_ECHO: bool = Field(default=False)
+
     model_config = SettingsConfigDict(
-        env_file= ".env",
+        env_file= (".env", "../.env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )

@@ -25,7 +25,7 @@ class TestHealthAndGEE(unittest.TestCase):
 
     @patch("app.main.init_gee")
     @patch("app.main.check_gee_connection")
-    def test_health_endpoint_degraded_when_gee_fails(self, mock_check_gee):
+    def test_health_endpoint_degraded_when_gee_fails(self, mock_check_gee, mock_init_gee):
         """
         Unit test for the health endpoint. Checks that the endpoint returns 'degraded' when GEE fails to connect.
         """
