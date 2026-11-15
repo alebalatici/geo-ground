@@ -28,7 +28,7 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
 
 def get_db() -> Generator[Session, None, None]:
-    """FastAPI dependency providing a transactional DB session."""
+    """FastAPI dependency providing a transactional DB db."""
     db = SessionLocal()
     try:
         yield db
