@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchSites } from "./api/endpoints";
+import ExecutiveBriefCard from "./components/ai/ExecutiveBriefCard";
+import SiteAssistantSidebar from "./components/ai/SiteAssistantSidebar";
 import MapPanel from "./components/MapPanel";
 
 function App() {
@@ -7,6 +9,7 @@ function App() {
   const [sites, setSites] = useState([]);
   const [dataSource, setDataSource] = useState("mock");
   const [selectedSiteId, setSelectedSiteId] = useState(null);
+  const [activeYear, setActiveYear] = useState(2026);
   const [loadingSites, setLoadingSites] = useState(true);
   const [recenterSignal, setRecenterSignal] = useState(0);
 
@@ -85,26 +88,54 @@ function App() {
 
       {/* Main Content */}
       <main className="grid flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-12">
-        <section className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-card p-4 lg:col-span-8">
+        {/* Coloana stângă: Hartă / Enterprise + Executive Brief + Timeline */}
+        <section className="flex flex-col justify-between gap-4 rounded-xl border border-border-subtle bg-surface-card p-4 lg:col-span-8">
           {viewMode === "executive" ? (
-            <MapPanel
-              sites={sites}
-              selectedSiteId={selectedSiteId}
-              onSelectSite={setSelectedSiteId}
-              recenterSignal={recenterSignal}
-              onRecenter={handleRecenter}
-            />
+            <>
+              <MapPanel
+                sites={sites}
+                selectedSiteId={selectedSiteId}
+                onSelectSite={setSelectedSiteId}
+                recenterSignal={recenterSignal}
+                onRecenter={handleRecenter}
+              />
+
+              {/* Rezumatul executiv generat automat pentru parcela selectată */}
+              <ExecutiveBriefCard siteId={selectedSite?.id} />
+            </>
           ) : (
-            <div className="flex min-h-[380px] flex-col items-center justify-center rounded-lg border border-dashed border-border-subtle p-4 text-center text-sm text-text-muted">
+            <div className="flex min-h-[380px] flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border-subtle p-4 text-center text-sm text-text-muted">
               Enterprise Analytics: Correlation Charts, Coordinate Table &amp; CSV Export
             </div>
           )}
 
-          <div className="mt-4 rounded-lg border border-border-subtle bg-surface-elevated px-4 py-3 text-xs text-text-secondary">
-            Timeline Slider (2000 – Present)
+          {/* Timeline Slider (2000 – Present) */}
+          <div className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-surface-elevated px-4 py-3 text-xs text-text-secondary sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-text-primary">
+                Timeline Slider (2000 – Present)
+              </span>
+              <span className="rounded border border-border-subtle bg-surface-base px-2 py-0.5 font-mono text-[11px] text-accent-amber">
+                {activeYear}
+              </span>
+            </div>
+
+            <div className="flex flex-1 items-center gap-3 sm:max-w-md">
+              <span className="font-mono text-[11px] text-text-muted">2000</span>
+              <input
+                type="range"
+                min={2000}
+                max={2026}
+                value={activeYear}
+                onChange={(e) => setActiveYear(Number(e.target.value))}
+                className="h-1.5 w-full cursor-pointer accent-amber-500"
+              />
+              <span className="font-mono text-[11px] text-text-muted">2026</span>
+            </div>
           </div>
         </section>
 
+        {/* Coloana dreaptă: Detalii Parcelă + Chat AI Contextual */}
         <aside className="flex flex-col gap-4 lg:col-span-4">
           <div className="rounded-xl border border-border-subtle bg-surface-card p-4">
             <h2 className="text-sm font-semibold text-text-primary">
@@ -117,7 +148,8 @@ function App() {
               <div className="mt-2 space-y-2 text-xs">
                 <p className="font-medium text-text-primary">{selectedSite.name}</p>
                 <p className="text-text-muted">
-                  Region: {selectedSite.region || "—"} • Status: {selectedSite.status || "—"}
+                  Region: {selectedSite.city || selectedSite.region || "—"} • Status:{" "}
+                  {selectedSite.latest_alert?.signal_type || selectedSite.status || "—"}
                 </p>
                 {Array.isArray(selectedSite.alerts) && selectedSite.alerts.length > 0 && (
                   <div className="space-y-1 pt-1">
@@ -143,13 +175,12 @@ function App() {
             )}
           </div>
 
-          <div className="flex-1 rounded-xl border border-border-subtle bg-surface-card p-4">
-            <h2 className="text-sm font-semibold text-text-primary">
-              AI Summary &amp; Contextual Chat
-            </h2>
-            <p className="mt-1 text-xs text-text-muted">
-              Connected to backend telemetry summary &amp; chat endpoints.
-            </p>
+          {/* Asistentul AI interactiv ancorat pe situl activ și anul de pe slider */}
+          <div className="flex min-h-[420px] flex-1 overflow-hidden rounded-xl border border-border-subtle">
+            <SiteAssistantSidebar
+              activeSite={selectedSite}
+              activeYear={activeYear}
+            />
           </div>
         </aside>
       </main>
