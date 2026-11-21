@@ -73,17 +73,19 @@ GeoGround is a Commercial Real Estate & Retail Site Intelligence platform. We pr
 - **Business Logic & Alert Engine (`app/services/alert_engine.py`):**
   - Multi-sensor correlation engine comparing historical baseline vs. recent observation windows across optical NDVI drops and SAR (`VV`/`VH`) double-bounce backscatter spikes.
   - Deterministic signal classification (`BASELINE_STABLE`, `LAND_CLEARING`, `STRUCTURAL_EXPANSION`, `CONVERSION_ACTIVE`), `GREEN` / `AMBER` severity assignment, and cloud-quality-weighted confidence scoring.
-- **Test Suite (`tests/`):** Comprehensive unit (mocked) and live integration tests (`unittest`) covering API health, GEE connectivity, GeoJSON polygon validation, all three satellite pipelines, PostGIS persistence (`test_spatial_models.py`), repository query/transaction flows (`test_site_repository.py`), and anomaly alert thresholds (`test_alert_engine.py`).
-- Comprehensive unit (mocked) and live integration tests (`unittest`) covering API health, GEE connectivity, GeoJSON polygon validation, all three satellite pipelines, PostGIS persistence (`test_spatial_models.py`), repository query/transaction flows (`test_site_repository.py`), anomaly alert thresholds (`test_alert_engine.py`), Gemini prompt grounding & offline failover (`test_llm_integration.py`), and intelligence service orchestration (`test_intelligence_service.py`).
+
+- **Test Suite (`tests/`):** Comprehensive unit (mocked) and live integration tests (`unittest`) covering API health, GEE connectivity, GeoJSON polygon validation, all three satellite pipelines, PostGIS persistence (`test_spatial_models.py`), repository query/transaction flows (`test_site_repository.py`), anomaly alert thresholds (`test_alert_engine.py`), Gemini prompt grounding & offline failover (`test_llm_integration.py`), intelligence service orchestration (`test_intelligence_service.py`), REST API v1 endpoints & CSV streaming (`test_api_v1.py`), and Romanian hub seeding idempotency (`test_seed_romania_hubs.py`).
 
 - **LLM Executive & Assistant Integration (`app/integrations/llm/`, `app/schemas/intelligence.py`, `app/services/intelligence_service.py`):**
   - `app/schemas/intelligence.py`: Pydantic v2 data contracts (`TelemetryContextPayload`, `ExecutiveSummaryResponse`, `SiteChatRequest`, `SiteChatResponse`, `ChatTurn`) structuring normalized sensor telemetry and multi-turn chat payloads.
   - `app/integrations/llm/prompts.py`: Strict anti-hallucination system prompts (`SYSTEM_PROMPT_EXECUTIVE`, `SYSTEM_PROMPT_ASSISTANT`) and deterministic telemetry serializers (`format_telemetry_context`) binding AI outputs exclusively to verified NDVI, SAR (`VV`/`VH`), and thermal (`LST_C`) metrics.
   - `app/integrations/llm/client.py`: `GeminiClient` gateway built on the official `google-genai` SDK (`gemini-2.5-flash`) with configurable HTTP timeouts, conversation history mapping, and a deterministic rule-based offline fallback safety net.
   - `app/services/intelligence_service.py`: `IntelligenceService` orchestrating `SiteRepository` spatial records, latest `SiteAlert` classifications, and 2000–present archive summaries with `GeminiClient` to produce investor executive briefs and timeline-aware assistant responses.
-
-### 🚧 Next Up (Backend)
-1. **REST API v1 & Seeding (`app/api/v1/`, `scripts/`):** Expose endpoints for sites, 2000–present timeline, spectral correlations, CSV exports, and pre-populate 6–8 real Romanian real-estate/industrial hubs for instant demo performance.
+- **REST API v1 & Seeding (`app/api/v1/`, `app/schemas/site.py`, `app/services/site_service.py`, `scripts/`):**
+  - `app/schemas/site.py`: Pydantic v2 contracts (`GeoJSONPolygon`, `SiteCreateRequest`, `SiteListItemResponse`, `SiteDetailResponse`, `SiteTimelineResponse`, `SpectralCorrelationResponse`, `AlertSummarySchema`) defining the HTTP API surface.
+  - `app/services/site_service.py`: `SiteService` orchestrating custom Romania polygon validation & PostGIS ingestion, 2000–present chronological timeline queries, monthly-bucketed optical NDVI vs. SAR `VV`/`VH` Pearson correlation analytics, and streaming CSV telemetry exports.
+  - `app/api/v1/` (`router.py`, `dependencies.py`, `endpoints/sites.py`, `endpoints/intelligence.py`, mounted in `app/main.py`): Versioned FastAPI routers exposing parcel CRUD (`GET/POST /api/v1/sites`, `GET /api/v1/sites/{site_id}`), historical timelines (`/timeline`), multispectral correlations (`/correlations`), CSV downloads (`/export/csv`), Gemini executive briefs (`/executive-summary`), and contextual site chat (`/chat`).
+  - `scripts/seed_romania_hubs.py`: Idempotent PostGIS seeder pre-populating 7 real Romanian commercial/logistics hubs across Cluj-Napoca, Bucharest, and Timișoara with calibrated 2000–2026 multi-sensor archives and anomaly alerts (plus optional `--live-gee` ingestion mode).
 
 ## 🚀 Getting Started (Local Development Setup)
 
