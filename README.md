@@ -74,9 +74,16 @@ GeoGround is a Commercial Real Estate & Retail Site Intelligence platform. We pr
   - Multi-sensor correlation engine comparing historical baseline vs. recent observation windows across optical NDVI drops and SAR (`VV`/`VH`) double-bounce backscatter spikes.
   - Deterministic signal classification (`BASELINE_STABLE`, `LAND_CLEARING`, `STRUCTURAL_EXPANSION`, `CONVERSION_ACTIVE`), `GREEN` / `AMBER` severity assignment, and cloud-quality-weighted confidence scoring.
 - **Test Suite (`tests/`):** Comprehensive unit (mocked) and live integration tests (`unittest`) covering API health, GEE connectivity, GeoJSON polygon validation, all three satellite pipelines, PostGIS persistence (`test_spatial_models.py`), repository query/transaction flows (`test_site_repository.py`), and anomaly alert thresholds (`test_alert_engine.py`).
+- Comprehensive unit (mocked) and live integration tests (`unittest`) covering API health, GEE connectivity, GeoJSON polygon validation, all three satellite pipelines, PostGIS persistence (`test_spatial_models.py`), repository query/transaction flows (`test_site_repository.py`), anomaly alert thresholds (`test_alert_engine.py`), Gemini prompt grounding & offline failover (`test_llm_integration.py`), and intelligence service orchestration (`test_intelligence_service.py`).
+
+- **LLM Executive & Assistant Integration (`app/integrations/llm/`, `app/schemas/intelligence.py`, `app/services/intelligence_service.py`):**
+  - `app/schemas/intelligence.py`: Pydantic v2 data contracts (`TelemetryContextPayload`, `ExecutiveSummaryResponse`, `SiteChatRequest`, `SiteChatResponse`, `ChatTurn`) structuring normalized sensor telemetry and multi-turn chat payloads.
+  - `app/integrations/llm/prompts.py`: Strict anti-hallucination system prompts (`SYSTEM_PROMPT_EXECUTIVE`, `SYSTEM_PROMPT_ASSISTANT`) and deterministic telemetry serializers (`format_telemetry_context`) binding AI outputs exclusively to verified NDVI, SAR (`VV`/`VH`), and thermal (`LST_C`) metrics.
+  - `app/integrations/llm/client.py`: `GeminiClient` gateway built on the official `google-genai` SDK (`gemini-2.5-flash`) with configurable HTTP timeouts, conversation history mapping, and a deterministic rule-based offline fallback safety net.
+  - `app/services/intelligence_service.py`: `IntelligenceService` orchestrating `SiteRepository` spatial records, latest `SiteAlert` classifications, and 2000–present archive summaries with `GeminiClient` to produce investor executive briefs and timeline-aware assistant responses.
+
 ### 🚧 Next Up (Backend)
-1. **LLM Executive Layer (`app/integrations/llm/`):** Integrate Gemini/Groq API to generate executive summaries and power the contextual site chat assistant.
-2. **REST API v1 & Seeding (`app/api/v1/`, `scripts/`):** Expose endpoints for sites, 2000–present timeline, spectral correlations, CSV exports, and pre-populate 6–8 real Romanian real-estate/industrial hubs for instant demo performance.
+1. **REST API v1 & Seeding (`app/api/v1/`, `scripts/`):** Expose endpoints for sites, 2000–present timeline, spectral correlations, CSV exports, and pre-populate 6–8 real Romanian real-estate/industrial hubs for instant demo performance.
 
 ## 🚀 Getting Started (Local Development Setup)
 

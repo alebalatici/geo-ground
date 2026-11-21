@@ -250,3 +250,15 @@ class AlertEngine:
             sar_vv_delta_db=evaluation.sar_vv_delta_db,
             confidence_score=evaluation.confidence_score,
         )
+
+def evaluate_site_anomalies(
+        site_id: uuid.UUID,
+        snapshots: Sequence[SatelliteSnapshot],
+        split_ratio: float = 0.7,
+) -> SiteAlert:
+    """Convenience wrapper around AlertEngine.evaluate_snapshots."""
+    return AlertEngine().evaluate_snapshots(
+        site_id=site_id,
+        snapshots=snapshots,
+        split_ratio=split_ratio,
+)

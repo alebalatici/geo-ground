@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.integrations.gee.client import init_gee, check_gee_connection, GEEClientError
+from app.api.v1.router import api_router
 
 logger = logging.getLogger("uvicorn")
 settings = get_settings()
@@ -32,6 +33,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/health", tags=["System"])
 def health_check():
