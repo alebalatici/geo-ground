@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     ENVIRONMENT: str = "development"
 
+
+
     # Google Earth Engine
     GEE_PROJECT_ID: str
     GEE_SERVICE_ACCOUNT_KEY_PATH: str | None = None
