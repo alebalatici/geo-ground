@@ -3,12 +3,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-
 class GeoJSONPolygon(BaseModel):
     """
     RFC 7946 GeoJSON Polygon geometry in EPSG:4326 ([lon, lat]).
     """
-
     type: Literal["Polygon"] = "Polygon"
     coordinates: list[list[list[float]]] = Field(
         ...,
@@ -21,7 +19,6 @@ class SiteCreateRequest(BaseModel):
     Payload for registering and analyzing a custom commercial real-estate parcel.
     The geometry must be a valid GeoJSON Polygon in EPSG:4326.
     """
-
     name: str = Field(..., min_length=2, max_length=160)
     city: str = Field(..., min_length=2, max_length=80)
     sector_type: str = Field(
@@ -40,7 +37,6 @@ class AlertSummarySchema(BaseModel):
     """
     Latest anomaly detection classification for a monitored site.
     """
-
     signal_type: str = "BASELINE_STABLE"
     severity: Literal["GREEN", "AMBER"] = "GREEN"
     confidence_score: float = Field(default=0.0, ge=0.0, le=1.0)
@@ -60,7 +56,6 @@ class SiteListItemResponse(BaseModel):
     Compact site representation used for map markers, polygons, and portfolio tables.
     Includes basic parcel metadata and the latest anomaly detection classification.
     """
-
     id: str
     name: str
     city: str
@@ -72,8 +67,9 @@ class SiteListItemResponse(BaseModel):
 
 
 class SiteDetailResponse(SiteListItemResponse):
-    """Full parcel metadata returned when inspecting an individual site."""
-
+    """
+    Full parcel metadata returned when inspecting an individual site.
+    """
     snapshot_count: int = 0
     archive_start_year: int | None = None
     archive_end_year: int | None = None
@@ -83,7 +79,6 @@ class TimelinePoint(BaseModel):
     """
     Single chronological observation point for the 2000–Present Timeline Slider.
     """
-
     observation_date: date
     year: int
     sensor: str
@@ -95,8 +90,9 @@ class TimelinePoint(BaseModel):
 
 
 class SiteTimelineResponse(BaseModel):
-    """Chronological 2000–present telemetry series powering the Timeline Slider."""
-
+    """
+    Chronological 2000–present telemetry series powering the Timeline Slider.
+    """
     site_id: str
     site_name: str
     city: str
@@ -107,8 +103,9 @@ class SiteTimelineResponse(BaseModel):
 
 
 class SpectralCorrelationPoint(BaseModel):
-    """Aligned optical vs. radar vs. thermal telemetry record for Enterprise Analytics charts."""
-
+    """
+    Aligned optical vs. radar vs. thermal telemetry record for Enterprise Analytics charts.
+    """
     period: str
     observation_date: date
     ndvi: float | None = None
@@ -119,8 +116,9 @@ class SpectralCorrelationPoint(BaseModel):
 
 
 class SpectralCorrelationResponse(BaseModel):
-    """Multispectral correlation dataset (NDVI vs. SAR VV/VH) + summary statistics."""
-
+    """
+    Multispectral correlation dataset (NDVI vs. SAR VV/VH) + summary statistics.
+    """
     site_id: str
     site_name: str
     pearson_ndvi_vs_vv: float | None = Field(

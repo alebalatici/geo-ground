@@ -1,5 +1,3 @@
-"""REST endpoints for Gemini executive briefings and contextual site assistant chat."""
-
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.v1.dependencies import get_intelligence_service
@@ -42,7 +40,9 @@ def chat_with_site_assistant(
     request: SiteChatRequest,
     service: IntelligenceService = Depends(get_intelligence_service),
 ) -> SiteChatResponse:
-    """Answer investor or GIS questions grounded strictly in active site telemetry."""
+    """
+    Answer investor or GIS questions grounded strictly in active site telemetry.
+    """
     try:
         return service.answer_site_chat(site_id=site_id, request=request)
     except SiteNotFoundError as exc:

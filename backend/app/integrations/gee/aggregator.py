@@ -5,7 +5,6 @@ from app.integrations.gee.sentinel2 import get_sentinel2_ndvi_series
 from app.integrations.gee.sentinel1 import get_sentinel1_sar_series
 from app.integrations.gee.landsat import get_landsat_historical_series
 
-
 def fetch_full_site_telemetry(
     polygon_coords: list[list[list[float]]],
     recent_start_date: str,

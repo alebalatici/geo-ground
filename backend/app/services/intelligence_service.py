@@ -128,12 +128,12 @@ class IntelligenceService:
         :return: Telemetry context payload containing site metadata, alert-derived
             measurements, and historical trend notes.
         """
-        site = self.site_repo.get_site_by_id(self.db, site_id)
+        site = self.site_repo.get_site_by_id(site_id)
         if site is None:
             raise SiteNotFoundError(f"Monitored site '{site_id}' was not found.")
 
-        latest_alert = self.site_repo.get_latest_alert(self.db, site_id)
-        snapshots = self.site_repo.get_snapshots_for_site(self.db, site_id)
+        latest_alert = self.site_repo.get_latest_alert(site_id)
+        snapshots = self.site_repo.get_snapshots_for_site(site_id)
 
         historical_notes = self._summarize_historical_snapshots(
             snapshots=snapshots, active_year=active_year

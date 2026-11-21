@@ -1,5 +1,3 @@
-"""REST endpoints for monitored sites, 2000-present timelines, spectral correlations, and CSV exports."""
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
@@ -29,7 +27,9 @@ def list_sites(
     ),
     service: SiteService = Depends(get_site_service),
 ) -> list[SiteListItemResponse]:
-    """Return all monitored parcels with GeoJSON polygons and latest alert badges."""
+    """
+    Return all monitored parcels with GeoJSON polygons and latest alert badges.
+    """
     return service.list_monitored_sites(city=city)
 
 
@@ -43,7 +43,9 @@ def create_site(
     payload: SiteCreateRequest,
     service: SiteService = Depends(get_site_service),
 ) -> SiteDetailResponse:
-    """Validate GeoJSON polygon within Romania bounds, store in PostGIS, and run EO pipeline."""
+    """
+    Validate GeoJSON polygon within Romania bounds, store in PostGIS, and run EO pipeline.
+    """
     try:
         return service.create_and_analyze_site(payload)
     except InvalidSitePolygonError as exc:
@@ -62,7 +64,9 @@ def get_site_detail(
     site_id: str,
     service: SiteService = Depends(get_site_service),
 ) -> SiteDetailResponse:
-    """Retrieve full site details, GeoJSON boundary, latest alert, and archive span."""
+    """
+    Retrieve full site details, GeoJSON boundary, latest alert, and archive span.
+    """
     try:
         return service.get_monitored_site(site_id)
     except SiteNotFoundError as exc:
@@ -87,7 +91,9 @@ def get_site_timeline(
     ),
     service: SiteService = Depends(get_site_service),
 ) -> SiteTimelineResponse:
-    """Return chronological multi-sensor snapshots for the interactive Timeline Slider."""
+    """
+    Return chronological multi-sensor snapshots for the interactive Timeline Slider.
+    """
     try:
         return service.get_site_timeline(
             site_id=site_id,
@@ -111,7 +117,9 @@ def get_site_correlations(
     site_id: str,
     service: SiteService = Depends(get_site_service),
 ) -> SpectralCorrelationResponse:
-    """Return aligned optical NDVI vs. radar SAR backscatter series for Enterprise Analytics."""
+    """
+    Return aligned optical NDVI vs. radar SAR backscatter series for Enterprise Analytics.
+    """
     try:
         return service.get_multispectral_correlations(site_id)
     except SiteNotFoundError as exc:
@@ -135,7 +143,10 @@ def export_site_csv(
     site_id: str,
     service: SiteService = Depends(get_site_service),
 ) -> StreamingResponse:
-    """Stream raw NDVI, SAR VV/VH, and thermal LST records as a downloadable CSV."""
+    """
+    Stream raw NDVI, SAR VV/VH, and thermal LST records as a downloadable CSV.
+    This endpoint is intended for Enterprise Analytics use cases.
+    """
     try:
         filename, csv_content = service.export_site_telemetry_csv(site_id)
     except SiteNotFoundError as exc:

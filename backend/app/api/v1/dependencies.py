@@ -9,10 +9,14 @@ from app.services.site_service import SiteService
 
 
 def get_site_service(db: Session = Depends(get_db)) -> SiteService:
-    """Provide a request-scoped SiteService instance."""
+    """
+    Provide a request-scoped SiteService instance.
+    """
     return SiteService(db=db)
 
 
 def get_intelligence_service(db: Session = Depends(get_db)) -> IntelligenceService:
-    """Provide a request-scoped IntelligenceService instance."""
+    """
+    Provide a request-scoped IntelligenceService instance.
+    """
     return IntelligenceService(db=db)

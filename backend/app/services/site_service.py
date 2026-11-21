@@ -1,5 +1,3 @@
-"""Business logic for spatial parcels, 2000-present timelines, spectral correlations, and CSV export."""
-
 from collections import defaultdict
 import csv
 from datetime import date, datetime, timezone
@@ -7,12 +5,13 @@ import io
 import math
 from typing import Any
 from uuid import UUID
-
+from app.integrations.gee.validator import InvalidPolygonError, validate_romania_polygon
 from sqlalchemy.orm import Session
 
 from app.integrations.gee.aggregator import fetch_full_site_telemetry
 from app.integrations.gee.validator import validate_romania_polygon
 from app.models.geometry_utils import wkb_element_to_geojson
+from app.models.spatial import SiteCategory
 from app.repositories.site_repository import SiteRepository
 from app.schemas.site import (
     AlertSummarySchema,
@@ -29,34 +28,42 @@ from app.services.intelligence_service import SiteNotFoundError
 
 
 class InvalidSitePolygonError(Exception):
-    """Raised when a submitted GeoJSON polygon fails geometric or Romania bounds validation."""
-
+    """
+    Raised when a submitted GeoJSON polygon fails geometric or Romania bounds validation.
+    """
 
 class SiteService:
-    """Orchestrates SiteRepository, GEE validation/extraction, and AlertEngine."""
-
+    """
+    Orchestrates SiteRepository, GEE validation/extraction, and AlertEngine.
+    Provides a RESTful API for site management and telemetry.
+    """
     def __init__(
         self,
         db: Session,
         site_repository: SiteRepository | None = None,
     ) -> None:
         self.db = db
-        self.site_repo = site_repository or SiteRepository()
+        self.site_repo = site_repository or SiteRepository(db=self.db)
 
     def list_monitored_sites(
         self, city: str | None = None
     ) -> list[SiteListItemResponse]:
-        """Return all monitored parcels (optionally filtered by city) with latest alerts."""
-        sites = self.site_repo.list_sites(self.db, city=city)
+        """
+        Return all monitored parcels (optionally filtered by city) with latest alerts.
+        """
+        sites = self.site_repo.list_sites(city=city)
         return [self._serialize_site_item(site) for site in sites]
 
     def get_monitored_site(self, site_id: UUID | str) -> SiteDetailResponse:
-        """Return detailed parcel metadata, geometry, latest alert, and archive span."""
-        site = self.site_repo.get_site_by_id(self.db, site_id)
+        """
+        Return detailed parcel metadata, geometry, latest alert, and archive span.
+        """
+        site_uuid = UUID(str(site_id))
+        site = self.site_repo.get_site_by_id(site_uuid).first()
         if site is None:
             raise SiteNotFoundError(f"Monitored site '{site_id}' was not found.")
 
-        snapshots = self.site_repo.get_snapshots_for_site(self.db, site_id)
+        snapshots = self.site_repo.get_snapshots_for_site(site_uuid)
         years = [
             d.year
             for s in snapshots
@@ -74,26 +81,31 @@ class SiteService:
     def create_and_analyze_site(
         self, payload: SiteCreateRequest
     ) -> SiteDetailResponse:
-        """Validate a custom GeoJSON polygon, persist in PostGIS, and run EO + Alert pipeline."""
+        """
+        Validate a custom GeoJSON polygon, persist in PostGIS, and run EO + Alert pipeline.
+        :param payload: the SiteCreateRequest payload
+        """
         geojson_dict = payload.geometry.model_dump()
         try:
-            validation_info = validate_romania_polygon(geojson_dict)
-        except ValueError as exc:
+            validation_info = validate_romania_polygon(payload.geometry.coordinates)
+        except (InvalidPolygonError, ValueError) as exc:
             raise InvalidSitePolygonError(str(exc)) from exc
 
         area_ha = (
             validation_info.get("area_hectares")
             if isinstance(validation_info, dict)
-            else None
+            else 10.0
         )
 
+        category = self._resolve_site_category(payload.sector_type)
+
         site = self.site_repo.create_site(
-            self.db,
             name=payload.name,
             city=payload.city,
-            geojson=geojson_dict,
-            area_hectares=area_ha,
-            sector_type=payload.sector_type,
+            category=category,
+            area_hectares=area_ha or 10.0,
+            geojson_boundary=geojson_dict,
+            metadata_json={"sector": payload.sector_type} if payload.sector_type else None,
         )
 
         if payload.run_live_gee:
@@ -104,10 +116,11 @@ class SiteService:
                 else []
             )
             if snapshots_payload:
-                self.site_repo.upsert_snapshots(self.db, site.id, snapshots_payload)
-                alert_result = evaluate_site_anomalies(snapshots_payload)
+                self.site_repo.upsert_snapshots(site.id, snapshots_payload)
+                orm_snapshots = self.site_repo.get_snapshots_for_site(site.id)
+                alert_result = evaluate_site_anomalies(site.id, orm_snapshots)
                 if alert_result:
-                    self.site_repo.save_alert(self.db, site.id, alert_result)
+                    self.site_repo.save_alert(alert_result)
 
         return self.get_monitored_site(site.id)
 
@@ -119,7 +132,8 @@ class SiteService:
         sensor: str | None = None,
     ) -> SiteTimelineResponse:
         """Return chronological multi-sensor observations for the 2000–Present Timeline Slider."""
-        site = self.site_repo.get_site_by_id(self.db, site_id)
+        site_uuid = UUID(str(site_id))
+        site = self.site_repo.get_site_by_id(site_uuid).first()
         if site is None:
             raise SiteNotFoundError(f"Monitored site '{site_id}' was not found.")
 
@@ -128,8 +142,7 @@ class SiteService:
         end_dt = date(effective_end_year, 12, 31)
 
         snapshots = self.site_repo.get_snapshots_for_site(
-            self.db,
-            site_id,
+            site_uuid,
             start_date=start_dt,
             end_date=end_dt,
             sensor=sensor,
@@ -149,12 +162,17 @@ class SiteService:
                         getattr(snap, "ndvi_mean", None) or getattr(snap, "ndvi", None)
                     ),
                     sar_vv_db=self._safe_float(
-                        getattr(snap, "vv_mean", None) or getattr(snap, "sar_vv", None)
+                        getattr(snap, "sar_vv_db", None)
+                        or getattr(snap, "vv_mean", None)
                     ),
                     sar_vh_db=self._safe_float(
-                        getattr(snap, "vh_mean", None) or getattr(snap, "sar_vh", None)
+                        getattr(snap, "sar_vh_db", None)
+                        or getattr(snap, "vh_mean", None)
                     ),
-                    lst_c=self._safe_float(getattr(snap, "lst_c", None)),
+                    lst_c=self._safe_float(
+                        getattr(snap, "lst_celsius", None)
+                        or getattr(snap, "lst_c", None)
+                    ),
                     cloud_cover_pct=self._safe_float(
                         getattr(snap, "cloud_cover_pct", None)
                     ),
@@ -177,11 +195,12 @@ class SiteService:
         self, site_id: UUID | str
     ) -> SpectralCorrelationResponse:
         """Align optical NDVI and radar SAR backscatter by month/year and compute Pearson r."""
-        site = self.site_repo.get_site_by_id(self.db, site_id)
+        site_uuid = UUID(str(site_id))
+        site = self.site_repo.get_site_by_id(site_uuid).first()
         if site is None:
             raise SiteNotFoundError(f"Monitored site '{site_id}' was not found.")
 
-        snapshots = self.site_repo.get_snapshots_for_site(self.db, site_id)
+        snapshots = self.site_repo.get_snapshots_for_site(site_uuid)
 
         # Bucket observations by YYYY-MM so Sentinel-2 (optical) and Sentinel-1 (SAR) align cleanly
         buckets: dict[str, dict[str, Any]] = defaultdict(
@@ -205,12 +224,14 @@ class SiteService:
                 getattr(snap, "ndvi_mean", None) or getattr(snap, "ndvi", None)
             )
             vv = self._safe_float(
-                getattr(snap, "vv_mean", None) or getattr(snap, "sar_vv", None)
+                getattr(snap, "sar_vv_db", None) or getattr(snap, "vv_mean", None)
             )
             vh = self._safe_float(
-                getattr(snap, "vh_mean", None) or getattr(snap, "sar_vh", None)
+                getattr(snap, "sar_vh_db", None) or getattr(snap, "vh_mean", None)
             )
-            lst = self._safe_float(getattr(snap, "lst_c", None))
+            lst = self._safe_float(
+                getattr(snap, "lst_celsius", None) or getattr(snap, "lst_c", None)
+            )
 
             if ndvi is not None:
                 buckets[period_key]["ndvi"].append(ndvi)
@@ -313,11 +334,15 @@ class SiteService:
 
     def _serialize_site_item(self, site: Any) -> SiteListItemResponse:
         """Convert ORM MonitoredSite + eager-loaded alert into Pydantic response."""
-        raw_geom = getattr(site, "geometry", None) or getattr(site, "geom", None)
+        raw_geom = (
+            getattr(site, "boundary", None)
+            or getattr(site, "geometry", None)
+            or getattr(site, "geom", None)
+        )
         if isinstance(raw_geom, dict):
             geojson = raw_geom
         elif raw_geom is not None:
-            geojson = wkb_to_geojson(raw_geom)
+            geojson = wkb_element_to_geojson(raw_geom)
         else:
             geojson = {"type": "Polygon", "coordinates": []}
 
@@ -326,20 +351,33 @@ class SiteService:
             alerts = getattr(site, "alerts", None) or []
             latest_alert = alerts[0] if alerts else None
 
+        meta = getattr(site, "metadata_json", None) or {}
+        cat = getattr(site, "category", None)
+        sector = (
+            getattr(site, "sector_type", None)
+            or meta.get("sector")
+            or (cat.value if hasattr(cat, "value") else str(cat) if cat else None)
+        )
+
+        severity_val = getattr(latest_alert, "severity", "GREEN") if latest_alert else "GREEN"
+        if hasattr(severity_val, "value"):
+            severity_val = severity_val.value
+
         alert_schema = AlertSummarySchema(
             signal_type=getattr(latest_alert, "signal_type", "BASELINE_STABLE")
             if latest_alert
             else "BASELINE_STABLE",
-            severity=getattr(latest_alert, "severity", "GREEN")
-            if latest_alert
-            else "GREEN",
+            severity=severity_val,
             confidence_score=self._safe_float(
                 getattr(latest_alert, "confidence_score", 0.0)
             )
             or 0.0,
             ndvi_baseline=self._safe_float(getattr(latest_alert, "ndvi_baseline", None)),
             ndvi_current=self._safe_float(getattr(latest_alert, "ndvi_current", None)),
-            ndvi_delta=self._safe_float(getattr(latest_alert, "ndvi_delta", None)),
+            ndvi_delta=self._safe_float(
+                getattr(latest_alert, "ndvi_delta", None)
+                or getattr(latest_alert, "ndvi_delta_pct", None)
+            ),
             sar_vv_delta_db=self._safe_float(
                 getattr(latest_alert, "sar_vv_delta_db", None)
                 or getattr(latest_alert, "vv_delta_db", None)
@@ -351,19 +389,29 @@ class SiteService:
             lst_current_c=self._safe_float(getattr(latest_alert, "lst_current_c", None)),
             lst_delta_c=self._safe_float(getattr(latest_alert, "lst_delta_c", None)),
             observation_window=getattr(latest_alert, "observation_window", None),
-            evaluated_at=getattr(latest_alert, "created_at", None),
+            evaluated_at=getattr(latest_alert, "detected_at", None)
+            or getattr(latest_alert, "created_at", None),
         )
 
         return SiteListItemResponse(
             id=str(site.id),
             name=site.name,
             city=site.city,
-            sector_type=getattr(site, "sector_type", None),
+            sector_type=sector,
             area_hectares=self._safe_float(getattr(site, "area_hectares", None)),
             geometry=geojson,
             latest_alert=alert_schema,
             created_at=getattr(site, "created_at", None),
         )
+
+    @staticmethod
+    def _resolve_site_category(sector_type: str | None) -> SiteCategory | str:
+        if sector_type:
+            upper = sector_type.upper()
+            for member in SiteCategory:
+                if member.name.upper() in upper or upper in member.name.upper():
+                    return member
+        return next(iter(SiteCategory))
 
     @staticmethod
     def _extract_date(snap: Any) -> date | None:
@@ -376,6 +424,11 @@ class SiteService:
 
     @staticmethod
     def _safe_float(value: Any) -> float | None:
+        """
+
+        :param value:
+        :return:
+        """
         if value is None:
             return None
         try:
@@ -385,10 +438,21 @@ class SiteService:
 
     @staticmethod
     def _mean(values: list[float]) -> float | None:
+        """
+        Return the mean of a list of values.
+        :param values: the list of values
+        :return: the mean value, or None if the list is empty
+        """
         return sum(values) / len(values) if values else None
 
     @staticmethod
     def _classify_point_regime(ndvi: float | None, vv: float | None) -> str:
+        """
+        Classify the spectral regime of a given point based on its NDVI and SAR VV.
+        :param ndvi: the NDVI value at the point
+        :param vv: the SAR VV value at the point
+        :return: the spectral regime label (e.g. "VEGETATED_BASELINE", "STRUCTURAL_BUILDUP")
+        """
         if ndvi is not None and vv is not None:
             if ndvi < 0.30 and vv > -9.5:
                 return "STRUCTURAL_BUILDUP"
@@ -398,6 +462,12 @@ class SiteService:
 
     @staticmethod
     def _compute_pearson(xs: list[float], ys: list[float]) -> float | None:
+        """
+        Compute the Pearson correlation coefficient between two sets of paired observations.
+        :param xs: the first set of paired observations
+        :param ys: the second set of paired observations
+        :return: the Pearson correlation coefficient, or None if insufficient observations
+        """
         n = len(xs)
         if n < 3 or len(ys) != n:
             return None
@@ -413,6 +483,12 @@ class SiteService:
 
     @staticmethod
     def _interpret_correlation(pearson_r: float | None, sample_count: int) -> str:
+        """
+        Return a human-readable interpretation of the Pearson correlation coefficient.
+        :param pearson_r: the Pearson correlation coefficient, or None if insufficient observations
+        :param sample_count: the number of overlapping periods (e.g. 12 months)
+        :return: a human-readable string describing the correlation
+        """
         if pearson_r is None:
             return (
                 f"Insufficient paired optical/SAR observations ({sample_count} overlapping periods) "

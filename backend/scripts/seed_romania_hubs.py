@@ -1,14 +1,11 @@
-"""Idempotent database seeder populating 7 real Romanian CRE & logistics hubs for instant demo."""
-
-import argparse
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 import logging
 from typing import Any
 
 from app.db.session import SessionLocal, init_db
 from app.integrations.gee.aggregator import fetch_full_site_telemetry
 from app.integrations.gee.validator import validate_romania_polygon
-from app.models.spatial import AlertSeverity, SiteAlert, SiteCategory
+from app.models.spatial import AlertSeverity, SiteCategory
 from app.repositories.site_repository import SiteRepository
 from app.services.alert_engine import evaluate_site_anomalies
 
@@ -17,7 +14,14 @@ logger = logging.getLogger(__name__)
 
 
 def _box_polygon(min_lon: float, min_lat: float, max_lon: float, max_lat: float) -> dict[str, Any]:
-    """Construct a closed counter-clockwise GeoJSON Polygon in EPSG:4326."""
+    """
+    Construct a closed counter-clockwise GeoJSON Polygon in EPSG:4326.
+    :param min_lon: minimum longitude
+    :param min_lat: minimum latitude
+    :param max_lon: maximum longitude
+    :param max_lat: maximum latitude
+    :return: GeoJSON Polygon
+    """
     return {
         "type": "Polygon",
         "coordinates": [
@@ -32,8 +36,12 @@ def _box_polygon(min_lon: float, min_lat: float, max_lon: float, max_lat: float)
     }
 
 
-def _resolve_category(preferred_names: list[str]) -> SiteCategory:
-    """Safely resolve a SiteCategory enum member regardless of exact enum naming."""
+def _resolve_category(preferred_names: list[str]) -> SiteCategory | str:
+    """
+    Safely resolve a SiteCategory enum member regardless of exact enum naming.
+    :param preferred_names: list of preferred names to match
+    :return: SiteCategory enum member
+    """
     members = {m.name.upper(): m for m in SiteCategory}
     for name in preferred_names:
         if name.upper() in members:
@@ -109,7 +117,11 @@ ROMANIA_DEMO_HUBS: list[dict[str, Any]] = [
 
 
 def build_calibrated_archive(profile: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Generate a realistic 2000–2026 multi-sensor archive + alert matching the hub's activity profile."""
+    """
+    Generate a realistic 2000–2026 multi-sensor archive + alert matching the hub's activity profile.
+    :param profile: the hub's activity profile
+    :return: a tuple of (snapshots, alert_data)
+    """
     snapshots: list[dict[str, Any]] = []
 
     # 1. Historical Landsat summer archive (2000–2015)
@@ -209,8 +221,12 @@ def build_calibrated_archive(profile: str) -> tuple[list[dict[str, Any]], dict[s
     return snapshots, alert_map[profile]
 
 
-def seed_romania_hubs(use_live_gee: bool = False) -> int:
-    """Insert Romanian demo hubs if not already present. Returns count of newly created sites."""
+def seed_romania_hubs(use_live_gee: bool = False) -> None:
+    """
+    Insert Romanian demo hubs if not already present. Returns count of newly created sites.
+    :param use_live_gee: if True, fetch live GEE telemetry instead of calibrated demo archives
+    :return: count of newly created sites
+    """
     init_db()
     with SessionLocal() as db:
         repo = SiteRepository(db=db)
@@ -224,7 +240,8 @@ def seed_romania_hubs(use_live_gee: bool = False) -> int:
                 logger.info("Skipping existing hub: %s", hub["name"])
                 continue
 
-            validate_romania_polygon(hub["geometry"])
+            polygon_coords = hub["geometry"]["coordinates"]
+            validate_romania_polygon(polygon_coords)
 
             site = repo.create_site(
                 name=hub["name"],
@@ -237,41 +254,23 @@ def seed_romania_hubs(use_live_gee: bool = False) -> int:
 
             if use_live_gee:
                 logger.info("Fetching live GEE telemetry for %s...", hub["name"])
-                bundle = fetch_full_site_telemetry(hub["geometry"])
-                snapshots = bundle.get("snapshots", []) if isinstance(bundle, dict) else []
+                today = datetime.now(timezone.utc).date()
+                bundle = fetch_full_site_telemetry(
+                    polygon_coords=polygon_coords,
+                    recent_start_date=(today - timedelta(days=365)).isoformat(),
+                    recent_end_date=today.isoformat(),
+                    historical_start_year=2000,
+                    historical_end_year=today.year,
+                    include_historical=True,
+                )
+                snapshots: list[dict[str, Any]] = []
+                if isinstance(bundle, dict):
+                    snapshots.extend(bundle.get("optical_sentinel2", []))
+                    snapshots.extend(bundle.get("radar_sentinel1", []))
+                    snapshots.extend(bundle.get("historical_landsat", []))
+
                 if snapshots:
                     repo.upsert_snapshots(site.id, snapshots)
                     orm_snapshots = repo.get_snapshots_for_site(site.id)
                     alert_obj = evaluate_site_anomalies(site.id, orm_snapshots)
                     repo.save_alert(alert_obj)
-            else:
-                snapshots, alert_data = build_calibrated_archive(hub["profile"])
-                if snapshots:
-                    repo.upsert_snapshots(site.id, snapshots)
-                if alert_data:
-                    alert_obj = SiteAlert(
-                        site_id=site.id,
-                        severity=alert_data["severity"],
-                        signal_type=alert_data["signal_type"],
-                        ndvi_delta_pct=alert_data["ndvi_delta_pct"],
-                        sar_vv_delta_db=alert_data["sar_vv_delta_db"],
-                        confidence_score=alert_data["confidence_score"],
-                    )
-                    repo.save_alert(alert_obj)
-
-            created_count += 1
-            logger.info("Seeded hub [%s] in %s (%s)", hub["name"], hub["city"], hub["profile"])
-
-        return created_count
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Seed Romanian CRE demo hubs into PostGIS.")
-    parser.add_argument(
-        "--live-gee",
-        action="store_true",
-        help="Fetch live Google Earth Engine telemetry instead of calibrated demo archives.",
-    )
-    args = parser.parse_args()
-    total = seed_romania_hubs(use_live_gee=args.live_gee)
-    logger.info("Seeding complete. Newly created sites: %d", total)
