@@ -44,6 +44,11 @@ def validate_romania_polygon(
     :return: a dictionary with geometric metrics: {"area_sq_km": float, "area_hectares": float, "vertex_count": int}
     :raises InvalidPolygonError: if the polygon is invalid
     """
+    if isinstance(polygon_coords, dict):
+        if polygon_coords.get("type") != "Polygon":
+            raise InvalidPolygonError("GeoJSON geometry must be of type 'Polygon'.")
+        polygon_coords = polygon_coords.get("coordinates", [])
+
     if not polygon_coords or not isinstance(polygon_coords, list) or not polygon_coords[0]:
         raise InvalidPolygonError("The GeoJSON polygon is empty or has an invalid structure.")
 
