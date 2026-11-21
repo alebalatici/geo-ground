@@ -82,7 +82,7 @@ class SiteRepository:
             .options(selectinload(MonitoredSite.alerts))
         )
         if city:
-            stmt = stmt.where(MonitoredSite.city.islike(city))
+            stmt = stmt.where(MonitoredSite.city.ilike(city))
         stmt = stmt.order_by(MonitoredSite.created_at.desc())
         return self.db.scalars(stmt).all()
 

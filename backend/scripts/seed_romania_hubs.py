@@ -8,6 +8,7 @@ from typing import Any
 from app.db.session import SessionLocal, init_db
 from app.integrations.gee.aggregator import fetch_full_site_telemetry
 from app.integrations.gee.validator import validate_romania_polygon
+from app.models.spatial import AlertSeverity, SiteAlert, SiteCategory
 from app.repositories.site_repository import SiteRepository
 from app.services.alert_engine import evaluate_site_anomalies
 
@@ -31,62 +32,78 @@ def _box_polygon(min_lon: float, min_lat: float, max_lon: float, max_lat: float)
     }
 
 
+def _resolve_category(preferred_names: list[str]) -> SiteCategory:
+    """Safely resolve a SiteCategory enum member regardless of exact enum naming."""
+    members = {m.name.upper(): m for m in SiteCategory}
+    for name in preferred_names:
+        if name.upper() in members:
+            return members[name.upper()]
+    return next(iter(SiteCategory))
+
+
 ROMANIA_DEMO_HUBS: list[dict[str, Any]] = [
     {
         "name": "Tetarom III Industrial & Logistics Corridor (Jucu)",
         "city": "Cluj-Napoca",
-        "sector_type": "Industrial & Logistics",
+        "category": _resolve_category(["INDUSTRIAL", "LOGISTICS", "COMMERCIAL"]),
         "area_hectares": 18.4,
         "geometry": _box_polygon(23.7810, 46.8420, 23.7865, 46.8460),
         "profile": "STRUCTURAL_EXPANSION",
+        "metadata": {"sector": "Industrial & Logistics", "est_eur_sqm": 85},
     },
     {
         "name": "Lomb / Cluj Innovation Park North Expansion",
         "city": "Cluj-Napoca",
-        "sector_type": "Mixed-Use & Tech Campus",
+        "category": _resolve_category(["COMMERCIAL", "MIXED_USE", "TECH_CAMPUS", "INDUSTRIAL"]),
         "area_hectares": 14.2,
         "geometry": _box_polygon(23.5650, 46.8100, 23.5698, 46.8135),
         "profile": "CONVERSION_ACTIVE",
+        "metadata": {"sector": "Mixed-Use & Tech Campus", "est_eur_sqm": 140},
     },
     {
         "name": "Florești West Retail & Warehousing Zone",
         "city": "Cluj-Napoca",
-        "sector_type": "Retail Park",
+        "category": _resolve_category(["RETAIL", "COMMERCIAL", "LOGISTICS"]),
         "area_hectares": 9.6,
         "geometry": _box_polygon(23.4820, 46.7445, 23.4862, 46.7475),
         "profile": "LAND_CLEARING",
+        "metadata": {"sector": "Retail Park", "est_eur_sqm": 115},
     },
     {
         "name": "Pipera Nord Commercial & Logistics Hub",
         "city": "Bucharest",
-        "sector_type": "Commercial & Retail",
+        "category": _resolve_category(["COMMERCIAL", "LOGISTICS", "RETAIL"]),
         "area_hectares": 12.8,
         "geometry": _box_polygon(26.1190, 44.5005, 26.1238, 44.5038),
         "profile": "CONVERSION_ACTIVE",
+        "metadata": {"sector": "Commercial & Retail", "est_eur_sqm": 260},
     },
     {
         "name": "A1 West Logistics Park (Chiajna Corridor)",
         "city": "Bucharest",
-        "sector_type": "Industrial & Logistics",
+        "category": _resolve_category(["LOGISTICS", "INDUSTRIAL", "COMMERCIAL"]),
         "area_hectares": 21.5,
         "geometry": _box_polygon(25.9510, 44.4530, 25.9570, 44.4570),
         "profile": "BASELINE_STABLE",
+        "metadata": {"sector": "Industrial & Logistics", "est_eur_sqm": 110},
     },
     {
         "name": "Dumbrăvița / Giarmata Airport Logistics Hub",
         "city": "Timișoara",
-        "sector_type": "Industrial & Logistics",
+        "category": _resolve_category(["LOGISTICS", "INDUSTRIAL", "COMMERCIAL"]),
         "area_hectares": 16.7,
         "geometry": _box_polygon(21.2720, 45.8030, 21.2772, 45.8068),
         "profile": "STRUCTURAL_EXPANSION",
+        "metadata": {"sector": "Industrial & Logistics", "est_eur_sqm": 78},
     },
     {
         "name": "Calea Șagului South Retail & Distribution Park",
         "city": "Timișoara",
-        "sector_type": "Retail Park",
+        "category": _resolve_category(["RETAIL", "COMMERCIAL", "LOGISTICS"]),
         "area_hectares": 11.3,
         "geometry": _box_polygon(21.1920, 45.7105, 21.1965, 45.7138),
         "profile": "BASELINE_STABLE",
+        "metadata": {"sector": "Retail Park", "est_eur_sqm": 95},
     },
 ]
 
@@ -102,10 +119,10 @@ def build_calibrated_archive(profile: str) -> tuple[list[dict[str, Any]], dict[s
                 "observation_date": date(year, 7, 15),
                 "sensor": "LANDSAT",
                 "ndvi_mean": 0.66 if profile != "BASELINE_STABLE" else 0.28,
-                "vv_mean": None,
-                "vh_mean": None,
-                "lst_c": 27.4 if profile != "BASELINE_STABLE" else 31.0,
-                "cloud_cover_pct": 4.5,
+                "sar_vv_db": None,
+                "sar_vh_db": None,
+                "lst_celsius": 27.4 if profile != "BASELINE_STABLE" else 31.0,
+                "valid_pixel_ratio": 0.95,
             }
         )
 
@@ -140,10 +157,10 @@ def build_calibrated_archive(profile: str) -> tuple[list[dict[str, Any]], dict[s
                 "observation_date": date(year, 8, 10),
                 "sensor": "SENTINEL-2",
                 "ndvi_mean": ndvi,
-                "vv_mean": None,
-                "vh_mean": None,
-                "lst_c": lst,
-                "cloud_cover_pct": 3.2,
+                "sar_vv_db": None,
+                "sar_vh_db": None,
+                "lst_celsius": lst,
+                "valid_pixel_ratio": 0.97,
             }
         )
         snapshots.append(
@@ -151,65 +168,41 @@ def build_calibrated_archive(profile: str) -> tuple[list[dict[str, Any]], dict[s
                 "observation_date": date(year, 8, 12),
                 "sensor": "SENTINEL-1",
                 "ndvi_mean": None,
-                "vv_mean": vv,
-                "vh_mean": vh,
-                "lst_c": None,
-                "cloud_cover_pct": 0.0,
+                "sar_vv_db": vv,
+                "sar_vh_db": vh,
+                "lst_celsius": None,
+                "valid_pixel_ratio": 1.0,
             }
         )
 
     alert_map: dict[str, dict[str, Any]] = {
         "CONVERSION_ACTIVE": {
             "signal_type": "CONVERSION_ACTIVE",
-            "severity": "AMBER",
+            "severity": AlertSeverity.AMBER,
             "confidence_score": 0.93,
-            "ndvi_baseline": 0.64,
-            "ndvi_current": 0.21,
-            "ndvi_delta": -0.43,
+            "ndvi_delta_pct": -67.19,
             "sar_vv_delta_db": 3.6,
-            "sar_vh_delta_db": 3.3,
-            "lst_current_c": 32.1,
-            "lst_delta_c": 3.9,
-            "observation_window": "2025-01-01 to 2026-08-12",
         },
         "LAND_CLEARING": {
             "signal_type": "LAND_CLEARING",
-            "severity": "AMBER",
+            "severity": AlertSeverity.AMBER,
             "confidence_score": 0.89,
-            "ndvi_baseline": 0.65,
-            "ndvi_current": 0.23,
-            "ndvi_delta": -0.42,
+            "ndvi_delta_pct": -64.62,
             "sar_vv_delta_db": 0.4,
-            "sar_vh_delta_db": 0.3,
-            "lst_current_c": 31.4,
-            "lst_delta_c": 3.5,
-            "observation_window": "2025-01-01 to 2026-08-12",
         },
         "STRUCTURAL_EXPANSION": {
             "signal_type": "STRUCTURAL_EXPANSION",
-            "severity": "AMBER",
+            "severity": AlertSeverity.AMBER,
             "confidence_score": 0.91,
-            "ndvi_baseline": 0.34,
-            "ndvi_current": 0.29,
-            "ndvi_delta": -0.05,
+            "ndvi_delta_pct": -14.71,
             "sar_vv_delta_db": 3.3,
-            "sar_vh_delta_db": 3.3,
-            "lst_current_c": 33.0,
-            "lst_delta_c": 2.2,
-            "observation_window": "2025-01-01 to 2026-08-12",
         },
         "BASELINE_STABLE": {
             "signal_type": "BASELINE_STABLE",
-            "severity": "GREEN",
+            "severity": AlertSeverity.GREEN,
             "confidence_score": 0.95,
-            "ndvi_baseline": 0.28,
-            "ndvi_current": 0.27,
-            "ndvi_delta": -0.01,
+            "ndvi_delta_pct": -3.57,
             "sar_vv_delta_db": 0.1,
-            "sar_vh_delta_db": 0.0,
-            "lst_current_c": 31.2,
-            "lst_delta_c": 0.2,
-            "observation_window": "2025-01-01 to 2026-08-12",
         },
     }
 
@@ -219,11 +212,11 @@ def build_calibrated_archive(profile: str) -> tuple[list[dict[str, Any]], dict[s
 def seed_romania_hubs(use_live_gee: bool = False) -> int:
     """Insert Romanian demo hubs if not already present. Returns count of newly created sites."""
     init_db()
-    repo = SiteRepository()
-    created_count = 0
-
     with SessionLocal() as db:
-        existing_sites = repo.list_sites(db)
+        repo = SiteRepository(db=db)
+        created_count = 0
+
+        existing_sites = repo.list_sites()
         existing_names = {s.name for s in existing_sites}
 
         for hub in ROMANIA_DEMO_HUBS:
@@ -234,31 +227,42 @@ def seed_romania_hubs(use_live_gee: bool = False) -> int:
             validate_romania_polygon(hub["geometry"])
 
             site = repo.create_site(
-                db,
                 name=hub["name"],
                 city=hub["city"],
-                geojson=hub["geometry"],
+                category=hub["category"],
                 area_hectares=hub["area_hectares"],
-                sector_type=hub["sector_type"],
+                geojson_boundary=hub["geometry"],
+                metadata_json=hub["metadata"],
             )
 
             if use_live_gee:
                 logger.info("Fetching live GEE telemetry for %s...", hub["name"])
                 bundle = fetch_full_site_telemetry(hub["geometry"])
                 snapshots = bundle.get("snapshots", []) if isinstance(bundle, dict) else []
-                alert_data = evaluate_site_anomalies(snapshots) if snapshots else None
+                if snapshots:
+                    repo.upsert_snapshots(site.id, snapshots)
+                    orm_snapshots = repo.get_snapshots_for_site(site.id)
+                    alert_obj = evaluate_site_anomalies(site.id, orm_snapshots)
+                    repo.save_alert(alert_obj)
             else:
                 snapshots, alert_data = build_calibrated_archive(hub["profile"])
-
-            if snapshots:
-                repo.upsert_snapshots(db, site.id, snapshots)
-            if alert_data:
-                repo.save_alert(db, site.id, alert_data)
+                if snapshots:
+                    repo.upsert_snapshots(site.id, snapshots)
+                if alert_data:
+                    alert_obj = SiteAlert(
+                        site_id=site.id,
+                        severity=alert_data["severity"],
+                        signal_type=alert_data["signal_type"],
+                        ndvi_delta_pct=alert_data["ndvi_delta_pct"],
+                        sar_vv_delta_db=alert_data["sar_vv_delta_db"],
+                        confidence_score=alert_data["confidence_score"],
+                    )
+                    repo.save_alert(alert_obj)
 
             created_count += 1
             logger.info("Seeded hub [%s] in %s (%s)", hub["name"], hub["city"], hub["profile"])
 
-    return created_count
+        return created_count
 
 
 if __name__ == "__main__":

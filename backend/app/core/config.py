@@ -1,13 +1,15 @@
 from functools import lru_cache
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+ROOT_DIR = BACKEND_DIR.parent
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "GeoGround API"
     API_V1_PREFIX: str = "/api/v1"
     ENVIRONMENT: str = "development"
-
-
 
     # Google Earth Engine
     GEE_PROJECT_ID: str
@@ -29,7 +31,7 @@ class Settings(BaseSettings):
     LLM_TIMEOUT_SECONDS: float = 15.0
 
     model_config = SettingsConfigDict(
-        env_file= (".env", "../.env"),
+        env_file=(BACKEND_DIR / ".env", ROOT_DIR / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
