@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     )
     DB_ECHO: bool = Field(default=False)
 
+    # LLM Integration (Google Gemini via google-genai)
+    GEMINI_API_KEY: str | None = None
+    LLM_MODEL_GEMINI: str = "gemini-2.5-flash"
+    LLM_TIMEOUT_SECONDS: float = 15.0
+
     model_config = SettingsConfigDict(
         env_file= (".env", "../.env"),
         env_file_encoding="utf-8",
