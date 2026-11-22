@@ -1,4 +1,5 @@
 import {apiRequest} from "./client.js";
+import { buildMockExecutiveSummary, buildMockChatReply } from "./mockData.js";
 
 /**
  * Site Intelligence API: Fetch executive summary for a specific site
@@ -8,6 +9,9 @@ import {apiRequest} from "./client.js";
 export function fetchExecutiveSummary(siteId) {
     return apiRequest(`/sites/${siteId}/executive-summary`, {
     method: "GET",
+    }).catch((err) => {
+      console.warn("Using mock executive summary:", err.message);
+      return buildMockExecutiveSummary(siteId);
     });
 }
 
@@ -27,6 +31,9 @@ export function sendSiteChatMessage(siteId, { message, activeYear = null, histor
       active_year: activeYear,
       history: history.slice(-10),
     }),
+  }).catch((err) => {
+    console.warn("Using mock chat reply:", err.message);
+    return buildMockChatReply(siteId, message);
   });
 }
 

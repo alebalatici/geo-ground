@@ -58,17 +58,24 @@ export async function fetchSites(city = null) {
 }
 
 export async function fetchSiteTimeline(siteId) {
-  const raw = await apiGet(`/sites/${siteId}/timeline`);
-  return (raw?.points || []).map((pt) => ({
-    year: pt.year,
-    month: Number(pt.observation_date?.slice(5, 7) || 6),
-    observation_date: pt.observation_date,
-    sensor: pt.sensor,
-    ndvi: pt.ndvi,
-    sar_db: pt.sar_vv_db,
-    lst_c: pt.lst_c,
-    uncertain: false,
-  }));
+  try {
+    const raw = await apiGet(`/sites/${siteId}/timeline`);
+    const data = (raw?.points || []).map((pt) => ({
+      year: pt.year,
+      month: Number(pt.observation_date?.slice(5, 7) || 6),
+      observation_date: pt.observation_date,
+      sensor: pt.sensor,
+      ndvi: pt.ndvi,
+      sar_db: pt.sar_vv_db,
+      lst_c: pt.lst_c,
+      uncertain: false,
+    }));
+    return { data, source: "api" };
+  } catch (err) {
+    console.warn("Using mock timeline:", err.message);
+    const site = MOCK_SITES.find((s) => s.id === siteId);
+    return { data: site?.timeline ?? [], source: "mock" };
+  }
 }
 
 export async function fetchAiSummary(siteId) {
