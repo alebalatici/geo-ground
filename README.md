@@ -2,7 +2,7 @@
 
 ## 1. Vision & Product Overview (B2B SaaS)
 
-GeoGround is a Commercial Real Estate & Retail Site Intelligence platform. We process raw satellite data (optical, radar, thermal) to provide institutional investment funds (REITs) and real estate developers with early-warning economic signals. The platform detects land clearing, construction activity, and urban expansion months before public permits are filed.
+GeoGround is a Commercial Real Estate & Retail Site Intelligence platform. We process raw satellite data (optical, radar, thermal) to provide institutional investment funds (REITs), real estate agents, and land buyers with early-warning economic signals. The platform detects land clearing, construction activity, and urban expansion months before public permits are filed.
 
 **Current Scope (4-Week MVP):**
 - Data processing and demonstrations limited exclusively to Romania (focusing on major hubs like Cluj-Napoca, Bucharest, and Timișoara) for speed, efficiency, and real-world ground-truth validation.
@@ -20,17 +20,17 @@ GeoGround is a Commercial Real Estate & Retail Site Intelligence platform. We pr
   - **Landsat 7 / 8 / 9 (`C02/T1_L2`):** Harmonized historical archives (2000–present) for long-term NDVI trends and Land Surface Temperature (`LST_C` in °C).
 - **Database:** PostgreSQL 16 with the PostGIS 3.4 extension (`SQLAlchemy 2.0` + `GeoAlchemy2`) for managing site polygons (`EPSG:4326`), historical telemetry snapshots, and early-warning alerts.
 - **Frontend:** React.js (built with Vite), Tailwind CSS, interactive maps via Leaflet, and charts powered by Recharts.
-- **AI Integration:** Free-tier LLMs (Gemini via Google AI Studio, Groq, or local Ollama) integrated via API into FastAPI. Strictly used to translate raw mathematical telemetry (e.g., *"NDVI dropped by 60% while SAR VV spiked by +3.4 dB"*) into human-readable executive summaries. No custom model training or fine-tuning is performed.
+- **AI Integration:** Multi-provider free-tier LLM gateway combining **Groq (`llama-3.3-70b-versatile`)** for sub-second conversational inference and **Google Gemini (`gemini-3.8-flash` / `gemini-3.5-flash-lite`)** as secondary cascade fallback. Strictly used to translate raw mathematical telemetry (e.g., *"NDVI dropped by 60% while SAR VV spiked by +3.4 dB"*) into plain-language, scientifically grounded real estate insights. No custom model training or fine-tuning is performed.
 
 ---
 
 ## 3. Core Platform Features
 
 1. **Role-Based Access Control (RBAC / View Switcher):**
-   - **Executive View:** Clean, minimalist dashboard designed for investors. Focuses on maps, timeline sliders, color-coded status alerts (Green/Amber), and high-level business intelligence.
+   - **Executive View:** Clean, minimalist dashboard designed for investors and agents. Focuses on maps, timeline sliders, color-coded status alerts (Green/Amber), and high-level business intelligence.
    - **Enterprise Analytics:** Bloomberg-terminal style dashboard for Data Science and GIS teams. Includes multispectral correlation charts (NDVI vs. SAR), raw coordinate logs, custom polygons, and CSV data exports.
 2. **Timeline Slider (2000 – Present):** Correlating historical satellite imagery with local real estate market evolution.
-3. **Persistent AI Assistant:** A sidebar chat window anchored to the interface, ready to answer contextual questions about the active site.
+3. **Persistent AI Real Estate Advisor:** A sidebar chat window anchored to the interface, translating satellite indices into practical ground insights tailored to the user's goal (homebuyer, investor, or real estate agent).
 
 ---
 
@@ -73,28 +73,29 @@ GeoGround is a Commercial Real Estate & Retail Site Intelligence platform. We pr
 - **Business Logic & Alert Engine (`app/services/alert_engine.py`):**
   - Multi-sensor correlation engine comparing historical baseline vs. recent observation windows across optical NDVI drops and SAR (`VV`/`VH`) double-bounce backscatter spikes.
   - Deterministic signal classification (`BASELINE_STABLE`, `LAND_CLEARING`, `STRUCTURAL_EXPANSION`, `CONVERSION_ACTIVE`), `GREEN` / `AMBER` severity assignment, and cloud-quality-weighted confidence scoring.
-
-- **Test Suite (`tests/`):** Comprehensive unit (mocked) and live integration tests (`unittest`) covering API health, GEE connectivity, GeoJSON polygon validation, all three satellite pipelines, PostGIS persistence (`test_spatial_models.py`), repository query/transaction flows (`test_site_repository.py`), anomaly alert thresholds (`test_alert_engine.py`), Gemini prompt grounding & offline failover (`test_llm_integration.py`), intelligence service orchestration (`test_intelligence_service.py`), REST API v1 endpoints & CSV streaming (`test_api_v1.py`), and Romanian hub seeding idempotency (`test_seed_romania_hubs.py`).
-
-- **LLM Executive & Assistant Integration (`app/integrations/llm/`, `app/schemas/intelligence.py`, `app/services/intelligence_service.py`):**
+- **Test Suite (`tests/`):** Comprehensive unit (mocked) and live integration tests (`unittest`) covering API health, GEE connectivity, GeoJSON polygon validation, all three satellite pipelines, PostGIS persistence (`test_spatial_models.py`), repository query/transaction flows (`test_site_repository.py`), anomaly alert thresholds (`test_alert_engine.py`), multi-provider LLM prompt grounding & offline failover (`test_llm_integration.py`), intelligence service orchestration (`test_intelligence_service.py`), REST API v1 endpoints & CSV streaming (`test_api_v1.py`), and Romanian hub seeding idempotency (`test_seed_romania_hubs.py`).
+- **Multi-Provider LLM Executive & Assistant Integration (`app/integrations/llm/`, `app/schemas/intelligence.py`, `app/services/intelligence_service.py`):**
   - `app/schemas/intelligence.py`: Pydantic v2 data contracts (`TelemetryContextPayload`, `ExecutiveSummaryResponse`, `SiteChatRequest`, `SiteChatResponse`, `ChatTurn`) structuring normalized sensor telemetry and multi-turn chat payloads.
-  - `app/integrations/llm/prompts.py`: Strict anti-hallucination system prompts (`SYSTEM_PROMPT_EXECUTIVE`, `SYSTEM_PROMPT_ASSISTANT`) and deterministic telemetry serializers (`format_telemetry_context`) binding AI outputs exclusively to verified NDVI, SAR (`VV`/`VH`), and thermal (`LST_C`) metrics.
-  - `app/integrations/llm/client.py`: `GeminiClient` gateway built on the official `google-genai` SDK (`gemini-2.5-flash`) with configurable HTTP timeouts, conversation history mapping, and a deterministic rule-based offline fallback safety net.
-  - `app/services/intelligence_service.py`: `IntelligenceService` orchestrating `SiteRepository` spatial records, latest `SiteAlert` classifications, and 2000–present archive summaries with `GeminiClient` to produce investor executive briefs and timeline-aware assistant responses.
+  - `app/integrations/llm/prompts.py`: Strict anti-hallucination system prompts (`SYSTEM_PROMPT_EXECUTIVE`, `SYSTEM_PROMPT_ASSISTANT`) and deterministic telemetry serializers (`format_telemetry_context`) translating verified NDVI, SAR (`VV`/`VH`), and thermal (`LST_C`) metrics into accessible real estate insights tailored to buyers, agents, and developers.
+  - `app/integrations/llm/client.py`: Multi-provider `GeminiClient` gateway orchestrating **Groq** (`groq` SDK, `llama-3.3-70b-versatile`) as primary low-latency inference engine with automatic cascade fallback to **Google Gemini** (`google-genai` SDK, `gemini-3.8-flash` / `gemini-3.5-flash-lite`) and a deterministic rule-based offline safety net.
+  - `app/services/intelligence_service.py`: `IntelligenceService` orchestrating `SiteRepository` spatial records, latest `SiteAlert` classifications, and 2000–present archive summaries with the LLM gateway to produce investor executive briefs and timeline-aware assistant responses.
 - **REST API v1 & Seeding (`app/api/v1/`, `app/schemas/site.py`, `app/services/site_service.py`, `scripts/`):**
   - `app/schemas/site.py`: Pydantic v2 contracts (`GeoJSONPolygon`, `SiteCreateRequest`, `SiteListItemResponse`, `SiteDetailResponse`, `SiteTimelineResponse`, `SpectralCorrelationResponse`, `AlertSummarySchema`) defining the HTTP API surface.
   - `app/services/site_service.py`: `SiteService` orchestrating custom Romania polygon validation & PostGIS ingestion, 2000–present chronological timeline queries, monthly-bucketed optical NDVI vs. SAR `VV`/`VH` Pearson correlation analytics, and streaming CSV telemetry exports.
-  - `app/api/v1/` (`router.py`, `dependencies.py`, `endpoints/sites.py`, `endpoints/intelligence.py`, mounted in `app/main.py`): Versioned FastAPI routers exposing parcel CRUD (`GET/POST /api/v1/sites`, `GET /api/v1/sites/{site_id}`), historical timelines (`/timeline`), multispectral correlations (`/correlations`), CSV downloads (`/export/csv`), Gemini executive briefs (`/executive-summary`), and contextual site chat (`/chat`).
+  - `app/api/v1/` (`router.py`, `dependencies.py`, `endpoints/sites.py`, `endpoints/intelligence.py`, mounted in `app/main.py`): Versioned FastAPI routers exposing parcel CRUD (`GET/POST /api/v1/sites`, `GET /api/v1/sites/{site_id}`), historical timelines (`/timeline`), multispectral correlations (`/correlations`), CSV downloads (`/export/csv`), AI executive briefs (`/executive-summary`), and contextual site chat (`/chat`).
   - `scripts/seed_romania_hubs.py`: Idempotent PostGIS seeder pre-populating 7 real Romanian commercial/logistics hubs across Cluj-Napoca, Bucharest, and Timișoara with calibrated 2000–2026 multi-sensor archives and anomaly alerts (plus optional `--live-gee` ingestion mode).
+
+---
 
 ## 🚀 Getting Started (Local Development Setup)
 
 Follow the steps below to set up and run the **GeoGround** backend locally.
 
 ### Prerequisites
-* **Python 3.11+**
-* **Docker & Docker Compose** (for the PostgreSQL 16 + PostGIS 3.4 spatial database)
-* **Google Earth Engine (GEE)** approved account or the team's Service Account JSON key
+- **Python 3.11+**
+- **Docker & Docker Compose** (for the PostgreSQL 16 + PostGIS 3.4 spatial database)
+- **Google Earth Engine (GEE)** approved account or the team's Service Account JSON key
+- **LLM API Keys (Free Tier):** [Groq Console](https://console.groq.com/) (primary) and/or [Google AI Studio](https://aistudio.google.com/) (backup)
 
 ---
 

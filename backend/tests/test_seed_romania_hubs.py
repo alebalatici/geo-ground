@@ -44,7 +44,6 @@ class TestSeedRomaniaHubs(unittest.TestCase):
             mock_obj.name = hub["name"]
 
         mock_repo_cls.return_value = mock_repo
-
         created = seed_romania_hubs(use_live_gee=False)
         self.assertEqual(created, 0)
         mock_repo.create_site.assert_not_called()

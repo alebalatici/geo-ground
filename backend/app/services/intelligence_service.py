@@ -42,7 +42,7 @@ class IntelligenceService:
         llm_client: GeminiClient | None = None,
     ) -> None:
         self.db = db
-        self.site_repo = site_repository or SiteRepository()
+        self.site_repo = site_repository or SiteRepository(db=self.db)
         self.llm_client = llm_client or get_llm_client()
 
     def get_site_executive_summary(

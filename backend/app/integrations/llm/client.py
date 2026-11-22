@@ -1,6 +1,6 @@
 """
-Google Gemini client (google-genai SDK) with a deterministic offline safety net.
-The Gemini client is configured from application settings.
+Multi-provider LLM Gateway (Groq primary + Google Gemini backup) with a deterministic
+offline safety net.
 """
 
 from dataclasses import dataclass
@@ -10,6 +10,7 @@ from typing import Sequence
 
 from google import genai
 from google.genai import types
+from groq import Groq
 
 from app.core.config import get_settings
 from app.integrations.llm.prompts import (
@@ -18,7 +19,6 @@ from app.integrations.llm.prompts import (
     build_assistant_prompt,
     build_executive_prompt,
 )
-
 from app.schemas.intelligence import ChatTurn, TelemetryContextPayload
 
 logger = logging.getLogger(__name__)
@@ -26,28 +26,40 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class LLMGenerationResult:
-    """Represents the immutable result of a language model generation.
-    Stores the generated text together with the name or identifier of the provider
-    that produced it. The instance is frozen after creation, making it suitable for
-    passing generation output through application layers without accidental mutation.
-    """
+    """Represents the immutable result of a language model generation."""
+
     text: str
     provider: str
 
 
 class GeminiClient:
     """
-    Gateway wrapping Google Gemini via the official google-genai SDK.
+    Gateway orchestrating Groq (primary low-latency inference) and Google Gemini
+    (secondary fallback) with deterministic offline protection.
     """
+
+    GEMINI_FALLBACK_MODELS: tuple[str, ...] = ("gemini-3.5-flash-lite", "gemini-3.8-flash")
+
     def __init__(
         self,
         api_key: str | None = None,
-        model: str = "gemini-2.5-flash",
+        model: str = "gemini-3.8-flash",
         timeout_seconds: float = 15.0,
+        groq_api_key: str | None = None,
+        groq_model: str = "llama-3.3-70b-versatile",
     ) -> None:
         self.api_key = api_key
         self.model = model
         self.timeout_seconds = timeout_seconds
+
+        self.groq_api_key = groq_api_key
+        self.groq_model = groq_model
+
+        self._groq_client = (
+            Groq(api_key=self.groq_api_key, timeout=min(self.timeout_seconds, 8.0))
+            if self.groq_api_key
+            else None
+        )
 
         self._client = (
             genai.Client(
@@ -61,18 +73,15 @@ class GeminiClient:
     def generate_executive_summary(
         self, telemetry: TelemetryContextPayload
     ) -> LLMGenerationResult:
-        """
-        Generate an executive intelligence brief from site telemetry.
-        :param telemetry: Telemetry context containing site metadata, signal status,
-        """
+        """Generate an executive intelligence brief from site telemetry."""
         user_prompt = build_executive_prompt(telemetry)
-        text = self._call_gemini(
+        text, provider_label = self._generate(
             system_prompt=SYSTEM_PROMPT_EXECUTIVE,
             user_prompt=user_prompt,
             history=None,
         )
-        if text:
-            return LLMGenerationResult(text=text, provider=f"gemini:{self.model}")
+        if text and provider_label:
+            return LLMGenerationResult(text=text, provider=provider_label)
 
         return LLMGenerationResult(
             text=self._deterministic_executive_fallback(telemetry),
@@ -86,41 +95,81 @@ class GeminiClient:
         history: Sequence[ChatTurn] | None = None,
         active_year: int | None = None,
     ) -> LLMGenerationResult:
-        """
-        Answer a contextual question about the active site.
-        :param telemetry: Telemetry context containing site metadata, classification
-        """
+        """Answer a contextual question about the active site."""
         user_prompt = build_assistant_prompt(
             telemetry=telemetry,
             user_message=user_message,
             active_year=active_year,
         )
-        text = self._call_gemini(
+        text, provider_label = self._generate(
             system_prompt=SYSTEM_PROMPT_ASSISTANT,
             user_prompt=user_prompt,
             history=history,
         )
-        if text:
-            return LLMGenerationResult(text=text, provider=f"gemini:{self.model}")
+        if text and provider_label:
+            return LLMGenerationResult(text=text, provider=provider_label)
 
         return LLMGenerationResult(
             text=self._deterministic_chat_fallback(telemetry),
             provider="deterministic_fallback",
         )
 
-    def _call_gemini(
+    def _generate(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        history: Sequence[ChatTurn] | None = None,
+    ) -> tuple[str | None, str | None]:
+        """Try Groq first for instant responses, then fall back to Gemini."""
+        groq_text = self._call_groq(system_prompt, user_prompt, history)
+        if groq_text:
+            return groq_text, f"groq:{self.groq_model}"
+
+        gemini_text, used_model = self._call_gemini(system_prompt, user_prompt, history)
+        if gemini_text and used_model:
+            return gemini_text, f"gemini:{used_model}"
+
+        return None, None
+
+    def _call_groq(
         self,
         system_prompt: str,
         user_prompt: str,
         history: Sequence[ChatTurn] | None = None,
     ) -> str | None:
-        """
-        Invoke Google Gemini; return None if unconfigured or on API failure.
-        :param system_prompt: System prompt to guide the model's responses.
-        """
-        if self._client is None:
-            logger.warning("GEMINI_API_KEY is not configured; using deterministic fallback.")
+        """Invoke Groq API (OpenAI-compatible messages format)."""
+        if self._groq_client is None:
             return None
+
+        messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
+        if history:
+            for turn in history:
+                role = "user" if turn.role == "user" else "assistant"
+                messages.append({"role": role, "content": turn.content})
+        messages.append({"role": "user", "content": user_prompt})
+
+        try:
+            completion = self._groq_client.chat.completions.create(
+                model=self.groq_model,
+                messages=messages,
+                temperature=0.25,
+                max_tokens=500,
+            )
+            content = completion.choices[0].message.content if completion.choices else None
+            return (content or "").strip() or None
+        except Exception as exc:
+            logger.warning("Groq API call failed on %s: %s", self.groq_model, exc)
+            return None
+
+    def _call_gemini(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        history: Sequence[ChatTurn] | None = None,
+    ) -> tuple[str | None, str | None]:
+        """Invoke Google Gemini as backup provider."""
+        if self._client is None:
+            return None, None
 
         contents: list[types.Content] = []
         if history:
@@ -140,34 +189,30 @@ class GeminiClient:
             )
         )
 
-        try:
-            response = self._client.models.generate_content(
-                model=self.model,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    temperature=0.2,
-                    max_output_tokens=600,
-                ),
-            )
-            return (response.text or "").strip() or None
-        except Exception as exc:
-            logger.warning("Gemini API call failed: %s", exc)
-            return None
+        candidate_models = list(dict.fromkeys([self.model, *self.GEMINI_FALLBACK_MODELS]))
+
+        for model_name in candidate_models:
+            try:
+                response = self._client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=0.25,
+                        max_output_tokens=500,
+                    ),
+                )
+                text = (response.text or "").strip()
+                if text:
+                    return text, model_name
+            except Exception as exc:
+                logger.warning("Gemini API call failed on %s: %s", model_name, exc)
+                continue
+
+        return None, None
 
     @staticmethod
     def _deterministic_executive_fallback(telemetry: TelemetryContextPayload) -> str:
-        """
-        Provides a deterministic fallback path for executive telemetry reporting when
-        generated narrative content is unavailable. The text is assembled from the
-        available site, signal, confidence, optical, and radar telemetry fields while
-        preserving stable formatting for downstream presentation.
-        :param telemetry: Telemetry context containing the site identity, location,
-            signal status, severity, confidence score, and optional optical and SAR
-            delta measurements used to compose the fallback narrative.
-        :return: Executive-ready fallback narrative describing the current site status,
-            supporting multi-sensor telemetry, and recommended monitoring action.
-        """
         ndvi_str = f"{telemetry.ndvi_delta:+.2f}" if telemetry.ndvi_delta is not None else "N/A"
         vv_str = (
             f"{telemetry.sar_vv_delta_db:+.2f} dB"
@@ -187,15 +232,6 @@ class GeminiClient:
 
     @staticmethod
     def _deterministic_chat_fallback(telemetry: TelemetryContextPayload) -> str:
-        """
-        Provides a deterministic fallback synthesis for satellite telemetry when AI
-        synthesis is unavailable. The generated narrative emphasizes the current
-        classification, severity, vegetation and radar deltas, confidence, and the
-        temporary unavailability of AI-generated analysis.
-        :param telemetry: Telemetry context containing site metadata, classification
-            details, severity, confidence, and available sensor delta metrics.
-        :return: Human-readable fallback telemetry summary.
-        """
         ndvi_str = f"{telemetry.ndvi_delta:+.2f}" if telemetry.ndvi_delta is not None else "N/A"
         vv_str = (
             f"{telemetry.sar_vv_delta_db:+.2f} dB"
@@ -210,19 +246,15 @@ class GeminiClient:
             f"AI synthesis is temporarily unavailable, so verified sensor metrics are displayed."
         )
 
+
 @lru_cache(maxsize=1)
 def get_llm_client() -> GeminiClient:
-    """
-    Create and cache the configured Gemini language model client.
-    Initializes a Gemini client using the application settings for the API key,
-    model name, and request timeout. The result is cached by the surrounding LRU
-    cache configuration, so repeated calls return the same client instance until the
-    cache is cleared or the process ends.
-    :return: Configured Gemini client instance ready for language model requests.
-    """
+    """Create and cache the configured multi-provider LLM client."""
     settings = get_settings()
     return GeminiClient(
         api_key=settings.GEMINI_API_KEY,
         model=settings.LLM_MODEL_GEMINI,
         timeout_seconds=settings.LLM_TIMEOUT_SECONDS,
+        groq_api_key=settings.GROQ_API_KEY,
+        groq_model=settings.LLM_MODEL_GROQ,
     )

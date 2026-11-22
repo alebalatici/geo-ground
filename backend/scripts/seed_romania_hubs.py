@@ -221,7 +221,7 @@ def build_calibrated_archive(profile: str) -> tuple[list[dict[str, Any]], dict[s
     return snapshots, alert_map[profile]
 
 
-def seed_romania_hubs(use_live_gee: bool = False) -> None:
+def seed_romania_hubs(use_live_gee: bool = False) -> int:
     """
     Insert Romanian demo hubs if not already present. Returns count of newly created sites.
     :param use_live_gee: if True, fetch live GEE telemetry instead of calibrated demo archives
@@ -240,6 +240,7 @@ def seed_romania_hubs(use_live_gee: bool = False) -> None:
                 logger.info("Skipping existing hub: %s", hub["name"])
                 continue
 
+            created_count += 1
             polygon_coords = hub["geometry"]["coordinates"]
             validate_romania_polygon(polygon_coords)
 
@@ -274,3 +275,5 @@ def seed_romania_hubs(use_live_gee: bool = False) -> None:
                     orm_snapshots = repo.get_snapshots_for_site(site.id)
                     alert_obj = evaluate_site_anomalies(site.id, orm_snapshots)
                     repo.save_alert(alert_obj)
+
+        return created_count
