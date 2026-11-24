@@ -1,0 +1,205 @@
+/* ============================================================================
+   themes.css — Dark and Light theme (semantic colour mapping)
+   ============================================================================
+   WHAT THIS FILE CONTROLS
+   Which palette colour is used for each part of the interface, separately for
+   the Dark theme (default) and the Light theme. Components never use raw hex
+   values: they only use the meaningful names defined here (--bg-canvas,
+   --text-primary, --accent-primary, ...), so every panel adapts to both themes.
+
+   HOW THEMES ARE SWITCHED
+   The website sets data-theme="dark" or data-theme="light" on the page's root
+   element. The Dark block also applies when no attribute is present, so Dark
+   is always the default.
+
+   WHO CAN EDIT IT
+   Anyone on the team. To change a colour, replace the palette name on the
+   right of the colon with another one from tokens.css, e.g.
+   --bg-canvas: var(--palette-midnight);
+
+   The Light block must stay AFTER the Dark block in this file.
+   ============================================================================ */
+
+
+/* ============================================================================
+   DARK THEME (default)
+   ============================================================================ */
+:root,
+[data-theme="dark"] {
+  /* Tells the browser to draw built-in controls (scrollbars, date pickers, ...) in dark. */
+  color-scheme: dark;
+
+  /* --- Backgrounds -------------------------------------------------------- */
+  /* Main application background */
+  --bg-canvas: var(--palette-obsidian);                 /* #180018 */
+  /* Primary cards, panels and modals */
+  --bg-surface-primary: var(--palette-midnight);        /* #2A114B */
+  /* Top header, active tabs and hover surfaces */
+  --bg-surface-elevated: var(--palette-aubergine);      /* #522959 */
+  /* Text input fields */
+  --bg-input: var(--palette-obsidian);                  /* #180018 */
+
+  /* --- Borders ------------------------------------------------------------ */
+  /* Card outlines, dividers and input borders */
+  --border-subtle: rgb(var(--palette-rose-rgb) / 0.22); /* #DFB6B2 at 22% */
+
+  /* --- Text --------------------------------------------------------------- */
+  /* Headings and primary data values */
+  --text-primary: var(--palette-cream);                 /* #FAE5D8 */
+  /* Body text, descriptions and table rows */
+  --text-secondary: var(--palette-rose);                /* #DFB6B2 */
+  /* Captions, timestamps and placeholders */
+  --text-muted: rgb(var(--palette-rose-rgb) / 0.65);    /* #DFB6B2 at 65% */
+
+  /* --- Accents ------------------------------------------------------------ */
+  /* Primary buttons and active toggles */
+  --accent-primary: var(--palette-rose);                /* #DFB6B2 */
+  /* Primary button hover (slightly lighter) */
+  --accent-primary-hover: color-mix(in srgb, var(--palette-rose) 78%, var(--palette-cream));
+  /* Text inside primary buttons */
+  --accent-primary-text: var(--palette-obsidian);       /* #180018 */
+  /* Badges, secondary highlights and focus rings */
+  --accent-secondary: var(--palette-mauve);             /* #824D69 */
+  /* Keyboard focus outline */
+  --focus-ring-color: var(--palette-rose);              /* #DFB6B2 */
+
+  /* --- Satellite signal status ------------------------------------------- */
+  /* Baseline / stable signal */
+  --status-green: var(--status-green-bright);           /* #22c55e */
+  /* Construction / land clearing alert */
+  --status-amber: var(--status-amber-bright);           /* #f59e0b */
+  /* Form errors */
+  --status-red: var(--status-red-bright);               /* #ef4444 */
+  /* Soft tinted backgrounds for status pills */
+  --status-green-surface: color-mix(in srgb, var(--status-green) 16%, transparent);
+  --status-amber-surface: color-mix(in srgb, var(--status-amber) 16%, transparent);
+  --status-red-surface: color-mix(in srgb, var(--status-red) 16%, transparent);
+
+  /* --- Effects ------------------------------------------------------------ */
+  /* Dimmed layer behind the login window */
+  --overlay-backdrop: rgb(var(--palette-obsidian-rgb) / 0.72);
+  /* Semi-transparent info overlay drawn on the satellite viewport */
+  --hud-bg: rgb(var(--palette-obsidian-rgb) / 0.72);
+  /* Shadow under cards */
+  --shadow-card: 0 1px 2px rgb(var(--palette-obsidian-rgb) / 0.5), 0 8px 24px rgb(var(--palette-obsidian-rgb) / 0.35);
+  /* Shadow under modal windows */
+  --shadow-modal: 0 24px 64px rgb(var(--palette-obsidian-rgb) / 0.75);
+
+  /* --- Satellite viewport drawing ----------------------------------------- */
+  /* Coordinate grid lines behind the parcel */
+  --grid-line: rgb(var(--palette-rose-rgb) / 0.1);
+  /* Fill colour of the parcel polygon */
+  --parcel-fill: rgb(var(--palette-rose-rgb) / 0.18);
+
+  /* --- Scrollbars --------------------------------------------------------- */
+  --scrollbar-thumb: rgb(var(--palette-rose-rgb) / 0.35);
+  --scrollbar-thumb-hover: rgb(var(--palette-rose-rgb) / 0.55);
+
+  /* --- Top navigation bar ------------------------------------------------- */
+  /* Translucent bar background (the page shows through, blurred) */
+  --navbar-bg: rgb(var(--palette-obsidian-rgb) / 0.78);
+
+  /* --- Hero section artwork ----------------------------------------------- */
+  /* Soft glow that follows the mouse cursor */
+  --hero-spotlight: rgb(var(--palette-aubergine-rgb) / 0.6);
+  /* Faint topographic contour lines (always visible) */
+  --hero-topo-line: rgb(var(--palette-rose-rgb) / 0.1);
+  /* Same lines, brighter, revealed around the mouse cursor */
+  --hero-topo-line-strong: rgb(var(--palette-rose-rgb) / 0.5);
+  /* Thin orbital arcs */
+  --hero-orbit-line: rgb(var(--palette-rose-rgb) / 0.24);
+  /* Small satellite dots on the orbital arcs */
+  --hero-orbit-dot: var(--palette-rose);
+}
+
+
+/* ============================================================================
+   LIGHT THEME
+   ============================================================================ */
+:root[data-theme="light"],
+[data-theme="light"] {
+  /* Tells the browser to draw built-in controls (scrollbars, date pickers, ...) in light. */
+  color-scheme: light;
+
+  /* --- Backgrounds -------------------------------------------------------- */
+  /* Main application background */
+  --bg-canvas: var(--palette-cream);                    /* #FAE5D8 */
+  /* Primary cards, panels and modals: white tinted with 40% cream (about #FDF5EF) */
+  --bg-surface-primary: color-mix(in srgb, var(--palette-cream) 40%, var(--palette-white));
+  /* Top header, active tabs and hover surfaces: Dusty Rose at 35% over cream (about #F1D5CB) */
+  --bg-surface-elevated: color-mix(in srgb, var(--palette-rose) 35%, var(--palette-cream));
+  /* Text input fields */
+  --bg-input: var(--palette-white);                     /* #FFFFFF */
+
+  /* --- Borders ------------------------------------------------------------ */
+  /* Card outlines, dividers and input borders */
+  --border-subtle: rgb(var(--palette-aubergine-rgb) / 0.2); /* #522959 at 20% */
+
+  /* --- Text --------------------------------------------------------------- */
+  /* Headings and primary data values */
+  --text-primary: var(--palette-obsidian);              /* #180018 */
+  /* Body text, descriptions and table rows */
+  --text-secondary: var(--palette-midnight);            /* #2A114B */
+  /* Captions, timestamps and placeholders */
+  --text-muted: var(--palette-mauve);                   /* #824D69 */
+
+  /* --- Accents ------------------------------------------------------------ */
+  /* Primary buttons and active toggles */
+  --accent-primary: var(--palette-aubergine);           /* #522959 */
+  /* Primary button hover (slightly darker) */
+  --accent-primary-hover: color-mix(in srgb, var(--palette-aubergine) 82%, var(--palette-midnight));
+  /* Text inside primary buttons */
+  --accent-primary-text: var(--palette-cream);          /* #FAE5D8 */
+  /* Badges, secondary highlights and focus rings */
+  --accent-secondary: var(--palette-mauve);             /* #824D69 */
+  /* Keyboard focus outline */
+  --focus-ring-color: var(--palette-mauve);             /* #824D69 */
+
+  /* --- Satellite signal status ------------------------------------------- */
+  /* Baseline / stable signal */
+  --status-green: var(--status-green-deep);             /* #15803d */
+  /* Construction / land clearing alert */
+  --status-amber: var(--status-amber-deep);             /* #b45309 */
+  /* Form errors */
+  --status-red: var(--status-red-deep);                 /* #b91c1c */
+  /* Soft tinted backgrounds for status pills */
+  --status-green-surface: color-mix(in srgb, var(--status-green) 12%, transparent);
+  --status-amber-surface: color-mix(in srgb, var(--status-amber) 12%, transparent);
+  --status-red-surface: color-mix(in srgb, var(--status-red) 12%, transparent);
+
+  /* --- Effects ------------------------------------------------------------ */
+  /* Dimmed layer behind the login window */
+  --overlay-backdrop: rgb(var(--palette-midnight-rgb) / 0.35);
+  /* Semi-transparent info overlay drawn on the satellite viewport */
+  --hud-bg: rgb(var(--palette-white-rgb) / 0.78);
+  /* Shadow under cards */
+  --shadow-card: 0 1px 2px rgb(var(--palette-aubergine-rgb) / 0.08), 0 8px 24px rgb(var(--palette-aubergine-rgb) / 0.1);
+  /* Shadow under modal windows */
+  --shadow-modal: 0 24px 64px rgb(var(--palette-midnight-rgb) / 0.3);
+
+  /* --- Satellite viewport drawing ----------------------------------------- */
+  /* Coordinate grid lines behind the parcel */
+  --grid-line: rgb(var(--palette-aubergine-rgb) / 0.1);
+  /* Fill colour of the parcel polygon */
+  --parcel-fill: rgb(var(--palette-aubergine-rgb) / 0.16);
+
+  /* --- Scrollbars --------------------------------------------------------- */
+  --scrollbar-thumb: rgb(var(--palette-aubergine-rgb) / 0.35);
+  --scrollbar-thumb-hover: rgb(var(--palette-aubergine-rgb) / 0.55);
+
+  /* --- Top navigation bar ------------------------------------------------- */
+  /* Translucent bar background (the page shows through, blurred) */
+  --navbar-bg: color-mix(in srgb, var(--palette-cream) 82%, transparent);
+
+  /* --- Hero section artwork ----------------------------------------------- */
+  /* Soft glow that follows the mouse cursor */
+  --hero-spotlight: rgb(var(--palette-rose-rgb) / 0.65);
+  /* Faint topographic contour lines (always visible) */
+  --hero-topo-line: rgb(var(--palette-aubergine-rgb) / 0.12);
+  /* Same lines, darker, revealed around the mouse cursor */
+  --hero-topo-line-strong: rgb(var(--palette-aubergine-rgb) / 0.5);
+  /* Thin orbital arcs */
+  --hero-orbit-line: rgb(var(--palette-aubergine-rgb) / 0.26);
+  /* Small satellite dots on the orbital arcs */
+  --hero-orbit-dot: var(--palette-aubergine);
+}

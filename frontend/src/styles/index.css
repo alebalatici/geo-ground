@@ -1,0 +1,23 @@
+/* ============================================================================
+   index.css — Global stylesheet entry point
+   ============================================================================
+   This file contains NO styles of its own. It only loads the global style
+   files, and the ORDER below matters:
+
+     1. tokens.css  raw palette, spacing, typography (defines the variables)
+     2. themes.css  Dark / Light mapping (uses the palette variables)
+     3. base.css    reset and page typography (uses the theme variables)
+     4. layout.css  page grid and shared containers (uses all of the above)
+
+   Feature stylesheets (header.css, auth.css, satelliteViewport.css, ...) are
+   imported by their own components, after this file.
+   ============================================================================ */
+
+@import "./styles/tokens.css";
+@import "./styles/themes.css";
+@import "./styles/base.css";
+@import "./styles/layout.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

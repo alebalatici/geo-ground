@@ -3,10 +3,11 @@ import { fetchSites } from "./api/endpoints";
 import ExecutiveBriefCard from "./components/ai/ExecutiveBriefCard";
 import SiteAssistantSidebar from "./components/ai/SiteAssistantSidebar";
 import EnterpriseAnalyticsPanel from "./components/enterprise/EnterpriseAnalyticsPanel";
-import HeaderBar from "./components/layout/HeaderBar";
 import MapPanel from "./components/MapPanel";
 import SiteDetailsCard from "./components/SiteDetailsCard";
 import TimelineSlider from "./components/TimelineSlider";
+import TopNavbar from "./features/header/TopNavbar.jsx";
+import HeroSection from "./features/hero/HeroSection.jsx";
 
 function App() {
   const [viewMode, setViewMode] = useState("executive");
@@ -46,15 +47,20 @@ function App() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-base text-text-primary">
-      <HeaderBar
+    <div className="app-shell">
+      <TopNavbar
         viewMode={viewMode}
-        onChangeViewMode={setViewMode}
+        onViewModeChange={setViewMode}
         dataSource={dataSource}
-        loadingSites={loadingSites}
+        isLoading={loadingSites}
       />
 
-      <main className="grid flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-12">
+      <HeroSection />
+
+      <main
+        id="platform"
+        className="platform-workspace grid flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-12"
+      >
         <section className="flex flex-col justify-between gap-4 rounded-xl border border-border-subtle bg-surface-card p-4 lg:col-span-8">
           {viewMode === "executive" ? (
             <>

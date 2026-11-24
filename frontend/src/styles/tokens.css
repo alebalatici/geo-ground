@@ -1,0 +1,139 @@
+/* ============================================================================
+   tokens.css — Raw design values (palette, spacing, radii, typography, motion)
+   ============================================================================
+   WHAT THIS FILE CONTROLS
+   The raw building blocks of the design: the six brand colours, the spacing
+   scale, corner radii, font sizes, layer order and animation speeds.
+
+   WHAT IT DOES NOT DO
+   It does not decide which colour is used where. That is the job of
+   themes.css, which maps these raw values to meaningful names such as
+   --bg-canvas or --text-primary for the Dark and the Light theme.
+
+   WHO CAN EDIT IT
+   Anyone on the team. Change a value here and every place that uses it
+   updates automatically.
+
+   NOTE ON BREAKPOINTS
+   CSS variables cannot be used inside @media rules, so the responsive
+   breakpoints are written as plain numbers in layout.css:
+   960px (tablet and below) and 640px (phone).
+   ============================================================================ */
+
+:root {
+  /* --------------------------------------------------------------------------
+     1. Brand palette — the six institutional plum-to-cream colours
+     -------------------------------------------------------------------------- */
+  --palette-cream: #FAE5D8;      /* Warm Cream (Alabaster) */
+  --palette-rose: #DFB6B2;       /* Dusty Rose (Soft Blush) */
+  --palette-mauve: #824D69;      /* Muted Plum (Mauve) */
+  --palette-aubergine: #522959;  /* Deep Aubergine (Royal Plum) */
+  --palette-midnight: #2A114B;   /* Midnight Indigo (Deep Violet) */
+  --palette-obsidian: #180018;   /* Obsidian Plum (Deep Dark) */
+  --palette-white: #FFFFFF;      /* Pure white, used only by the Light theme */
+
+  /* --------------------------------------------------------------------------
+     2. Palette colour channels (red green blue)
+        Allow semi-transparent versions of a palette colour while keeping the
+        exact hex value above as the single source of truth, e.g.
+        rgb(var(--palette-rose-rgb) / 0.22)
+     -------------------------------------------------------------------------- */
+  --palette-cream-rgb: 250 229 216;
+  --palette-rose-rgb: 223 182 178;
+  --palette-mauve-rgb: 130 77 105;
+  --palette-aubergine-rgb: 82 41 89;
+  --palette-midnight-rgb: 42 17 75;
+  --palette-obsidian-rgb: 24 0 24;
+  --palette-white-rgb: 255 255 255;
+
+  /* --------------------------------------------------------------------------
+     3. Status colours — satellite signal indicators
+        "bright" versions suit the Dark theme, "deep" versions the Light theme.
+     -------------------------------------------------------------------------- */
+  --status-green-bright: #22c55e;
+  --status-green-deep: #15803d;
+  --status-amber-bright: #f59e0b;
+  --status-amber-deep: #b45309;
+  --status-red-bright: #ef4444;  /* Used for form errors only */
+  --status-red-deep: #b91c1c;    /* Used for form errors only */
+
+  /* --------------------------------------------------------------------------
+     4. Spacing scale (1 unit = 0.25rem = 4px at the default font size)
+     -------------------------------------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* --------------------------------------------------------------------------
+     5. Borders and corner radii
+     -------------------------------------------------------------------------- */
+  --border-width: 1px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  /* --------------------------------------------------------------------------
+     6. Typography
+        The first font of each list is used when installed on the visitor's
+        computer; otherwise the browser falls back to the next one.
+     -------------------------------------------------------------------------- */
+  --font-family-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-md: 1.125rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  --font-size-3xl: 2.5rem;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.06em;  /* Uppercase pill tags and small captions */
+
+  /* --------------------------------------------------------------------------
+     7. Page structure dimensions
+     -------------------------------------------------------------------------- */
+  --header-height: 4rem;
+  --sidebar-width: clamp(20rem, 28vw, 25rem);
+  --content-max-width: 100rem;
+  --viewport-min-height: 28rem;
+
+  /* --------------------------------------------------------------------------
+     8. Layer order (what appears on top of what)
+     -------------------------------------------------------------------------- */
+  --z-base: 0;
+  --z-sidebar: 90;
+  --z-header: 100;
+  --z-modal-backdrop: 1000;
+  --z-modal: 1010;
+  --z-toast: 1100;
+
+  /* --------------------------------------------------------------------------
+     9. Animation
+     -------------------------------------------------------------------------- */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+}

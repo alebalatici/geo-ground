@@ -1,19 +1,27 @@
 @import "tailwindcss";
 
+@import "./styles/tokens.css";
+@import "./styles/themes.css";
+@import "./styles/base.css";
+@import "./styles/layout.css";
+
+/* 2. Punte temporară pentru componentele vechi (Tailwind v4)
+   Leagă clasele vechi (ex: bg-surface-base) de variabilele din themes.css,
+   ca aplicația să nu se strice până ajungem la Step 5. */
 @theme {
-  --color-surface-base: #0f172a;
-  --color-surface-elevated: #1e293b;
-  --color-surface-card: #182232;
-  --color-border-subtle: #334155;
+  --color-surface-base: var(--bg-canvas);
+  --color-surface-elevated: var(--bg-surface-elevated);
+  --color-surface-card: var(--bg-surface-primary);
+  --color-border-subtle: var(--border-subtle);
 
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
-  --color-text-muted: #94a3b8;
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
 
-  --color-accent-amber: #d97706;
-  --color-accent-copper: #b45309;
-  --color-accent-blue: #4b7bec;
+  --color-accent-amber: var(--accent-primary);
+  --color-accent-copper: var(--accent-secondary);
+  --color-accent-blue: var(--accent-secondary);
 
-  --color-status-green: #16a34a;
-  --color-status-amber: #eab308;
+  --color-status-green: var(--status-green);
+  --color-status-amber: var(--status-amber);
 }

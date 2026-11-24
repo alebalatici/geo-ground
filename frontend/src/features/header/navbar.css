@@ -1,0 +1,307 @@
+/* ============================================================================
+   navbar.css — Top navigation bar, data badge, view switcher, theme toggle
+   ============================================================================ */
+
+/* Height of the sticky bar. Sections use it to stop just below the bar when scrolled to. */
+:root {
+  --navbar-height: 64px;
+}
+
+section[id],
+main[id] {
+  scroll-margin-top: calc(var(--navbar-height) + 12px);
+}
+
+/* --- Bar shell ------------------------------------------------------------ */
+.top-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: var(--navbar-height);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--navbar-bg);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+}
+
+.top-navbar__inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  height: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.top-navbar a:focus-visible,
+.top-navbar button:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
+/* --- Left: brand + data badge --------------------------------------------- */
+.top-navbar__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.top-navbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-primary);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.top-navbar__brand-mark {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--accent-primary);
+  border-radius: 50%;
+}
+
+.top-navbar__brand-mark::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  right: -1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+}
+
+.data-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.data-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.data-badge--live {
+  color: var(--status-green);
+  background: var(--status-green-surface);
+  border-color: color-mix(in srgb, var(--status-green) 35%, transparent);
+}
+
+.data-badge--demo {
+  color: var(--status-amber);
+  background: var(--status-amber-surface);
+  border-color: color-mix(in srgb, var(--status-amber) 35%, transparent);
+}
+
+.data-badge--loading {
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+}
+
+.data-badge--loading::before {
+  animation: data-badge-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes data-badge-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* --- Center: links + view switcher ---------------------------------------- */
+.top-navbar__center {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.top-navbar__links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.top-navbar__link {
+  position: relative;
+  padding: 6px 2px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.top-navbar__link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease;
+}
+
+.top-navbar__link:hover {
+  color: var(--text-primary);
+}
+
+.top-navbar__link:hover::after {
+  transform: scaleX(1);
+}
+
+.view-switcher {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--bg-surface-primary);
+}
+
+.view-switcher__button {
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.view-switcher__button:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface-elevated);
+}
+
+.view-switcher__button--active,
+.view-switcher__button--active:hover {
+  background: var(--accent-primary);
+  color: var(--accent-primary-text);
+}
+
+/* --- Right: theme toggle + auth slot -------------------------------------- */
+.top-navbar__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Empty slot (Log In / Sign Up not added yet) takes no space. */
+.top-navbar__auth-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.top-navbar__auth-slot:empty {
+  display: none;
+}
+
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-surface-elevated);
+}
+
+.theme-toggle__icon {
+  display: inline-grid;
+  animation: theme-toggle-spin 0.35s ease;
+}
+
+@keyframes theme-toggle-spin {
+  from {
+    opacity: 0;
+    transform: rotate(-60deg) scale(0.7);
+  }
+}
+
+/* --- Responsive ----------------------------------------------------------- */
+@media (max-width: 960px) {
+  .top-navbar__links {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .top-navbar__inner {
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    padding: 0 16px;
+  }
+
+  .top-navbar__center {
+    justify-content: center;
+  }
+
+  /* Only the coloured dot remains; the tooltip still explains it. */
+  .data-badge__label {
+    display: none;
+  }
+
+  .data-badge {
+    padding: 5px;
+  }
+
+  .view-switcher__button {
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-navbar__brand-mark {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .data-badge--loading::before,
+  .theme-toggle__icon {
+    animation: none;
+  }
+
+  .top-navbar__link::after,
+  .view-switcher__button,
+  .theme-toggle {
+    transition: none;
+  }
+}
