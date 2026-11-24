@@ -181,7 +181,7 @@ export const HEADER_CONTENT = {
  */
 export const HERO_CONTENT = {
   /** Small pill above the title. */
-  eyebrow: 'Satellite intelligence for commercial real estate',
+   eyebrow: 'Satellite intelligence for commercial real estate',
 
   /** Giant title of the page. */
   title: 'GeoGround',

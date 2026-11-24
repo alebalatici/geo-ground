@@ -8,22 +8,25 @@ const VIEW_OPTIONS = [
   { value: 'enterprise', label: HEADER_CONTENT.viewSwitcher.enterpriseLabel },
 ];
 
+/*
 function resolveBadgeState(dataSource, isLoading) {
   if (isLoading) return 'loading';
   return dataSource === 'api' ? 'live' : 'demo';
-}
+}*/
 
 export default function TopNavbar({
   viewMode,
   onViewModeChange,
-  dataSource,
-  isLoading = false,
+  // dataSource,
+  // isLoading = false,
   authSlot = null,
 }) {
-  const badgeCopy = HEADER_CONTENT.dataSourceBadge;
-  const badgeState = resolveBadgeState(dataSource, isLoading);
-  const badgeLabel = badgeCopy[badgeState];
-  const badgeTooltip = badgeCopy[`${badgeState}Tooltip`];
+  /*
+   const badgeCopy = HEADER_CONTENT.dataSourceBadge;
+   const badgeState = resolveBadgeState(dataSource, isLoading);
+   const badgeLabel = badgeCopy[badgeState];
+   const badgeTooltip = badgeCopy[`${badgeState}Tooltip`];
+*/
 
   function handleNavLinkClick(event, targetId) {
     if (scrollToSection(targetId)) {
@@ -49,12 +52,14 @@ export default function TopNavbar({
             <span className="top-navbar__brand-mark" aria-hidden="true" />
             {HEADER_CONTENT.brandName}
           </a>
+
+          {/*
           <span
             className={`data-badge data-badge--${badgeState}`}
             title={badgeTooltip}
           >
             <span className="data-badge__label">{badgeLabel}</span>
-          </span>
+          </span> */}
         </div>
 
         <div className="top-navbar__center">
