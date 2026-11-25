@@ -1,4 +1,5 @@
 import { HERO_CONTENT } from '../../config/appContent.js';
+import { Link } from 'react-router-dom';
 import { scrollToSection } from '../../utils/scrollHelpers.js';
 import AmbientHeroBackdrop from './AmbientHeroBackdrop.jsx';
 import './hero.css';
@@ -9,8 +10,9 @@ function handleSectionClick(event, targetId) {
   }
 }
 
-export default function HeroSection() {
+export default function HeroSection({ missionHref, primaryLabel, primaryTargetId }) {
   const { eyebrow, title, headline, description, primaryButton, secondaryButton } = HERO_CONTENT;
+  const resolvedPrimaryTarget = primaryTargetId || primaryButton.targetId;
 
   return (
     <section className="hero" aria-labelledby="hero-title">
@@ -26,19 +28,22 @@ export default function HeroSection() {
 
         <div className="hero__actions">
           <a
-            href={`#${primaryButton.targetId}`}
+            href={`#${resolvedPrimaryTarget}`}
             className="hero__button hero__button--primary"
-            onClick={(event) => handleSectionClick(event, primaryButton.targetId)}
+            onClick={(event) => handleSectionClick(event, resolvedPrimaryTarget)}
           >
-            {primaryButton.label}
+            {primaryLabel || primaryButton.label}
           </a>
-          <a
+          {missionHref ? <Link
+            to={missionHref}
+            className="hero__button hero__button--secondary"
+          >{secondaryButton.label}</Link> : <a
             href={`#${secondaryButton.targetId}`}
             className="hero__button hero__button--secondary"
             onClick={(event) => handleSectionClick(event, secondaryButton.targetId)}
           >
             {secondaryButton.label}
-          </a>
+          </a>}
         </div>
       </div>
     </section>

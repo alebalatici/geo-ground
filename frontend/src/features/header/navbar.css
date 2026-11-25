@@ -226,6 +226,21 @@ main[id] {
   display: none;
 }
 
+.top-navbar__inner { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.top-navbar__center { min-width: 0; }
+.site-selector { position: relative; display: inline-flex; align-items: center; min-width: 150px; max-width: 230px; }
+.site-selector select { width: 100%; min-width: 0; appearance: none; padding: 8px 30px 8px 12px; border: 1px solid var(--border-subtle); border-radius: 999px; background: var(--bg-surface-primary); color: var(--text-primary); font: inherit; font-size: .8rem; cursor: pointer; }
+.site-selector select:disabled { color: var(--text-muted); cursor: wait; }
+.site-selector select:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+.site-selector option { background: var(--bg-surface-primary); color: var(--text-primary); }
+.site-selector__chevron { position: absolute; right: 12px; color: var(--text-muted); pointer-events: none; }
+.navbar-sign-in { padding: 8px 15px; border: 1px solid var(--border-subtle); border-radius: 999px; background: var(--bg-surface-primary); color: var(--text-primary); font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background-color .15s ease, border-color .15s ease; }
+.navbar-sign-in:hover { border-color: var(--accent-primary); background: var(--bg-surface-elevated); }
+.navbar-sign-in:focus-visible { outline: 2px solid var(--focus-ring-color); outline-offset: 2px; }
+.top-navbar--landing .top-navbar__inner { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.top-navbar--landing .top-navbar__right { grid-column: 3; }
+.top-navbar--landing .top-navbar__links { display: flex; }
+
 .theme-toggle {
   display: inline-grid;
   place-items: center;
@@ -257,40 +272,46 @@ main[id] {
 
 /* --- Responsive ----------------------------------------------------------- */
 @media (max-width: 960px) {
-  .top-navbar__links {
-    display: none;
-  }
+  .top-navbar__inner { gap: 10px; padding-inline: 16px; }
+  .top-navbar__links { gap: 12px; }
+  .data-badge__label { display: none; }
+  .data-badge { padding: 5px; }
+  .top-navbar__center { gap: 10px; }
+  .site-selector { max-width: 180px; }
 }
 
 @media (max-width: 720px) {
   .top-navbar__inner {
-    grid-template-columns: auto 1fr auto;
-    gap: 10px;
-    padding: 0 16px;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    height: auto;
+    min-height: var(--navbar-height);
+    padding: 8px 14px;
   }
 
   .top-navbar__center {
-    justify-content: center;
-  }
-
-  /* Only the coloured dot remains; the tooltip still explains it. */
-  .data-badge__label {
-    display: none;
-  }
-
-  .data-badge {
-    padding: 5px;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: space-between;
   }
 
   .view-switcher__button {
     padding: 6px 10px;
   }
+  .top-navbar--landing .top-navbar__inner { grid-template-columns: 1fr auto; }
+  .top-navbar--landing .top-navbar__links { grid-column: 1 / -1; grid-row: 2; justify-content: center; }
+  .top-navbar--landing .top-navbar__right { grid-column: 2; grid-row: 1; }
 }
 
 @media (max-width: 480px) {
   .top-navbar__brand-mark {
     display: none;
   }
+  .top-navbar__left { gap: 6px; }
+  .top-navbar__inner { padding-inline: 10px; }
+  .site-selector { max-width: 52vw; min-width: 120px; }
+  .view-switcher__button { padding-inline: 8px; font-size: .75rem; }
+  .navbar-sign-in { padding-inline: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
